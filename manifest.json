@@ -1,0 +1,11 @@
+{
+  "name": "World Game 2D",
+  "short_name": "WorldGame",
+  "description": "Open World 2D Sandbox RPG",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#1a1a2e",
+  "theme_color": "#6366f1",
+  "orientation": "landscape",
+  "icons": []
+}

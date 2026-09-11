@@ -1,0 +1,588 @@
+// ============================================================
+// OPEN WORLD 2D - Juego de mundo abierto con RPG
+// ============================================================
+
+const CONFIG = {
+  width: 1280,
+  height: 720,
+  tileSize: 64,
+  worldWidth: 200,
+  worldHeight: 200
+};
+
+const COLORS = {
+  skin: [0xf4c28f, 0xd4a574, 0xc68642, 0x8d5524, 0x6b3a1f, 0x3d2314],
+  hair: [0x2c1810, 0x4a3728, 0x8b6914, 0xd4a017, 0xc0392b, 0x8e44ad, 0x2980b9, 0x27ae60, 0xf39c12, 0xecf0f1],
+  clothes: [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6, 0x1abc9c, 0xe67e22, 0x34495e, 0x95a5a6, 0xd35400],
+  eyes: [0x2c3e50, 0x27ae60, 0x2980b9, 0x8e44ad, 0xd35400]
+};
+
+const HAIRSTYLES = [
+  { name: 'Corto', frames: [0, 1, 2, 3] },
+  { name: 'Largo', frames: [4, 5, 6, 7] },
+  { name: 'Moño', frames: [8, 9, 10, 11] },
+  { name: 'Raya', frames: [12, 13, 14, 15] },
+  { name: 'Punk', frames: [16, 17, 18, 19] }
+];
+
+const INITIAL_CLOTHES = [
+  { name: 'Camiseta', type: 'top', color: 0x3498db },
+  { name: 'Pantalón', type: 'bottom', color: 0x2c3e50 },
+  { name: 'Botas', type: 'shoes', color: 0x6b3a1f }
+];
+
+// ============================================================
+// DATOS DEL JUEGO
+// ============================================================
+
+const RECIPES = [
+  { id: 'pan', name: 'Pan', ingredients: ['harina', 'agua'], result: 'pan', category: 'cocina', xp: 10 },
+  { id: 'guiso', name: 'Guiso de carne', ingredients: ['carne', 'verdura', 'agua'], result: 'guiso', category: 'cocina', xp: 25 },
+  { id: 'pocion_vida', name: 'Poción de vida', ingredients: ['hierba_roja', 'agua'], result: 'pocion_vida', category: 'alquimia', xp: 15 },
+  { id: 'espada_hierro', name: 'Espada de hierro', ingredients: ['hierro', 'madera', 'cuero'], result: 'espada_hierro', category: 'herreria', xp: 50 },
+  { id: 'hacha_piedra', name: 'Hacha de piedra', ingredients: ['piedra', 'madera'], result: 'hacha_piedra', category: 'carpinteria', xp: 20 },
+  { name: 'ropa_lana', name: 'Ropa de lana', ingredients: ['lana', 'hilo'], result: 'ropa_lana', category: 'sastreria', xp: 30 }
+];
+
+const ITEMS = {
+  // Materiales
+  madera: { name: 'Madera', type: 'material', icon: '🪵', stack: 99 },
+  piedra: { name: 'Piedra', type: 'material', icon: '🪨', stack: 99 },
+  hierro: { name: 'Hierro', type: 'material', icon: '⛏️', stack: 99 },
+  cuero: { name: 'Cuero', type: 'material', icon: '🟫', stack: 99 },
+  lana: { name: 'Lana', type: 'material', icon: '🧶', stack: 99 },
+  hilo: { name: 'Hilo', type: 'material', icon: '🧵', stack: 99 },
+  harina: { name: 'Harina', type: 'material', icon: '🌾', stack: 99 },
+  agua: { name: 'Agua', type: 'material', icon: '💧', stack: 99 },
+  hierba_roja: { name: 'Hierba roja', type: 'material', icon: '🌿', stack: 99 },
+  verdura: { name: 'Verdura', type: 'material', icon: '🥕', stack: 99 },
+  carne: { name: 'Carne', type: 'material', icon: '🥩', stack: 99 },
+  // Herramientas
+  hacha_piedra: { name: 'Hacha de piedra', type: 'herramienta', icon: '🪓', stack: 1, damage: 5 },
+  espada_hierro: { name: 'Espada de hierro', type: 'arma', icon: '⚔️', stack: 1, damage: 15 },
+  // Comida
+  pan: { name: 'Pan', type: 'comida', icon: '🍞', stack: 20, heal: 10 },
+  guiso: { name: 'Guiso de carne', type: 'comida', icon: '🍲', stack: 10, heal: 30 },
+  // Pociones
+  pocion_vida: { name: 'Poción de vida', type: 'pocion', icon: '🧪', stack: 10, heal: 50 },
+  // Ropa
+  ropa_lana: { name: 'Ropa de lana', type: 'ropa', icon: '🧥', stack: 1, defense: 5 }
+};
+
+const ENEMIES = [
+  { name: 'Lobo', hp: 30, damage: 5, xp: 15, loot: ['cuero', 'carne'], color: 0x5d4e37 },
+  { name: 'Goblin', hp: 20, damage: 3, xp: 10, loot: ['hierro', 'madera'], color: 0x4a7c4e },
+  { name: 'Esqueleto', hp: 40, damage: 8, xp: 25, loot: ['hierro', 'hueso'], color: 0xe8e8e8 },
+  { name: 'Ogro', hp: 80, damage: 15, xp: 50, loot: ['cuero', 'hierro', 'carne'], color: 0x8b4513 }
+];
+
+const BIOMES = [
+  { name: 'Bosque', color: 0x2d5a27, resources: ['madera', 'hierba_roja', 'verdura'] },
+  { name: 'Pradera', color: 0x7cba3d, resources: ['verdura', 'lana', 'carne'] },
+  { name: 'Montaña', color: 0x8b8b8b, resources: ['piedra', 'hierro'] },
+  { name: 'Desierto', color: 0xd4a017, resources: ['piedra', 'hierro'] },
+  { name: 'Pantano', color: 0x4a5a3a, resources: ['hierba_roja', 'agua'] }
+];
+
+// ============================================================
+// ESTADO DEL JUEGO
+// ============================================================
+
+let gameState = {
+  player: null,
+  inventory: [],
+  equipment: { top: null, bottom: null, shoes: null, weapon: null },
+  stats: { level: 1, xp: 0, xpNext: 100, hp: 100, maxHp: 100, mp: 50, maxMp: 50, str: 5, int: 5, dex: 5, vit: 5 },
+  skills: [],
+  world: null,
+  enemies: [],
+  resources: [],
+  buildings: [],
+  day: 1,
+  time: 0
+};
+
+// ============================================================
+// ESCENA: CREACIÓN DE PERSONAJE
+// ============================================================
+
+class CharacterCreationScene extends Phaser.Scene {
+  constructor() { super({ key: 'CharacterCreation' }); }
+  
+  preload() {
+    // Generar sprites proceduralmente
+    this.createSprites();
+  }
+  
+  createSprites() {
+    // Crear texturas de personaje
+    for (let i = 0; i < 20; i++) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      // Cuerpo
+      g.fillStyle(COLORS.skin[0]);
+      g.fillRect(16, 20, 32, 40);
+      // Cabeza
+      g.fillStyle(COLORS.skin[0]);
+      g.fillCircle(32, 12, 12);
+      // Ojos
+      g.fillStyle(0x000000);
+      g.fillCircle(28, 10, 2);
+      g.fillCircle(36, 10, 2);
+      // Pelo (variaciones)
+      g.fillStyle(COLORS.hair[i % COLORS.hair.length]);
+      if (i < 4) { g.fillRect(20, 0, 24, 8); g.fillRect(20, 0, 8, 16); g.fillRect(36, 0, 8, 16); }
+      else if (i < 8) { g.fillRect(20, 0, 24, 8); g.fillRect(16, 0, 8, 24); g.fillRect(40, 0, 8, 24); }
+      else if (i < 12) { g.fillRect(20, 0, 24, 8); g.fillCircle(32, 4, 10); }
+      else if (i < 16) { g.fillRect(20, 0, 24, 8); g.fillRect(20, 0, 4, 16); }
+      else { g.fillRect(20, 0, 24, 8); g.fillRect(16, 0, 8, 12); g.fillRect(40, 0, 8, 12); }
+      g.generateTexture('char_' + i, 64, 64);
+      g.destroy();
+    }
+    
+    // Crear texturas de ropa
+    for (let i = 0; i < COLORS.clothes.length; i++) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(COLORS.clothes[i]);
+      g.fillRect(16, 20, 32, 40);
+      g.generateTexture('shirt_' + i, 64, 64);
+      g.destroy();
+      
+      const g2 = this.make.graphics({ x: 0, y: 0, add: false });
+      g2.fillStyle(COLORS.clothes[i]);
+      g2.fillRect(16, 40, 32, 20);
+      g2.generateTexture('pants_' + i, 64, 64);
+      g2.destroy();
+    }
+  }
+  
+  create() {
+    this.add.text(CONFIG.width / 2, 50, 'Crear Personaje', { fontSize: '32px', color: '#fff' }).setOrigin(0.5);
+    
+    // Preview del personaje
+    this.preview = this.add.image(CONFIG.width / 2, 250, 'char_0').setScale(3);
+    
+    // Nombre
+    this.add.text(CONFIG.width / 2 - 200, 400, 'Nombre:', { fontSize: '18px', color: '#fff' });
+    this.nameText = this.add.text(CONFIG.width / 2 - 50, 400, 'Hero', { fontSize: '18px', color: '#4ade80' });
+    
+    // Selector de piel
+    this.add.text(CONFIG.width / 2 - 200, 440, 'Piel:', { fontSize: '14px', color: '#fff' });
+    this.skinIndex = 0;
+    COLORS.skin.forEach((c, i) => {
+      const btn = this.add.rectangle(CONFIG.width / 2 - 50 + i * 40, 440, 30, 30, c).setInteractive();
+      btn.on('pointerdown', () => { this.skinIndex = i; this.updatePreview(); });
+    });
+    
+    // Selector de pelo
+    this.add.text(CONFIG.width / 2 - 200, 480, 'Pelo:', { fontSize: '14px', color: '#fff' });
+    this.hairIndex = 0;
+    COLORS.hair.forEach((c, i) => {
+      const btn = this.add.rectangle(CONFIG.width / 2 - 50 + i * 40, 480, 30, 30, c).setInteractive();
+      btn.on('pointerdown', () => { this.hairIndex = i; this.updatePreview(); });
+    });
+    
+    // Selector de ropa
+    this.add.text(CONFIG.width / 2 - 200, 520, 'Ropa:', { fontSize: '14px', color: '#fff' });
+    this.clothesIndex = 0;
+    COLORS.clothes.forEach((c, i) => {
+      const btn = this.add.rectangle(CONFIG.width / 2 - 50 + i * 40, 520, 30, 30, c).setInteractive();
+      btn.on('pointerdown', () => { this.clothesIndex = i; this.updatePreview(); });
+    });
+    
+    // Botón crear
+    const createBtn = this.add.rectangle(CONFIG.width / 2, 620, 200, 50, 0x6366f1).setInteractive();
+    createBtn.on('pointerdown', () => this.createCharacter());
+    this.add.text(CONFIG.width / 2, 620, 'Crear', { fontSize: '20px', color: '#fff' }).setOrigin(0.5);
+    
+    this.updatePreview();
+  }
+  
+  updatePreview() {
+    this.preview.setTexture('char_' + (this.hairIndex * 4));
+  }
+  
+  createCharacter() {
+    gameState.player = {
+      name: this.nameText.text || 'Hero',
+      skinColor: COLORS.skin[this.skinIndex],
+      hairColor: COLORS.hair[this.hairIndex],
+      clothesColor: COLORS.clothes[this.clothesIndex],
+      hairStyle: this.hairIndex,
+      x: CONFIG.worldWidth * CONFIG.tileSize / 2,
+      y: CONFIG.worldHeight * CONFIG.tileSize / 2
+    };
+    
+    // Inventario inicial
+    gameState.inventory = [
+      { id: 'pan', qty: 5 },
+      { id: 'agua', qty: 10 },
+      { id: 'madera', qty: 20 }
+    ];
+    
+    this.scene.start('WorldScene');
+  }
+}
+
+// ============================================================
+// ESCENA: MUNDO ABIERTO
+// ============================================================
+
+class WorldScene extends Phaser.Scene {
+  constructor() { super({ key: 'WorldScene' }); }
+  
+  create() {
+    // Crear mundo
+    this.createWorld();
+    
+    // Crear jugador
+    this.player = this.add.rectangle(gameState.player.x, gameState.player.y, 48, 48, gameState.player.clothesColor);
+    this.player.setDepth(10);
+    
+    // Cámara
+    this.cameras.main.setBounds(0, 0, CONFIG.worldWidth * CONFIG.tileSize, CONFIG.worldHeight * CONFIG.tileSize);
+    this.cameras.main.startFollow(this.player);
+    
+    // Controles
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+    this.space = this.input.keyboard.addKey('SPACE');
+    this.iKey = this.input.keyboard.addKey('I');
+    this.cKey = this.input.keyboard.addKey('C');
+    
+    // UI
+    this.createUI();
+    
+    // Spawn enemigos y recursos
+    this.spawnEntities();
+    
+    // Guardar referencia
+    gameState.scene = this;
+  }
+  
+  createWorld() {
+    this.world = [];
+    const tileSize = CONFIG.tileSize;
+    
+    // Generar mapa con biomas
+    for (let y = 0; y < CONFIG.worldHeight; y++) {
+      this.world[y] = [];
+      for (let x = 0; x < CONFIG.worldWidth; x++) {
+        const biome = this.getBiome(x, y);
+        const tile = this.add.rectangle(x * tileSize, y * tileSize, tileSize, tileSize, biome.color);
+        tile.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(biome.color).darken(20).color);
+        this.world[y][x] = { biome, tile };
+      }
+    }
+  }
+  
+  getBiome(x, y) {
+    const noise = Math.sin(x * 0.1) * Math.cos(y * 0.1) + Math.sin(x * 0.05 + y * 0.05);
+    if (noise > 0.5) return BIOMES[0]; // Bosque
+    if (noise > 0) return BIOMES[1]; // Pradera
+    if (noise > -0.5) return BIOMES[2]; // Montaña
+    return BIOMES[3]; // Desierto
+  }
+  
+  createUI() {
+    // Barra de vida
+    this.add.rectangle(10, 10, 200, 20, 0x333333).setOrigin(0, 0).setScrollFactor(0).setDepth(100);
+    this.hpBar = this.add.rectangle(10, 10, 200, 20, 0xe74c3c).setOrigin(0, 0).setScrollFactor(0).setDepth(101);
+    this.hpText = this.add.text(110, 20, '100/100', { fontSize: '12px', color: '#fff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    
+    // Barra de XP
+    this.add.rectangle(10, 35, 200, 10, 0x333333).setOrigin(0, 0).setScrollFactor(0).setDepth(100);
+    this.xpBar = this.add.rectangle(10, 35, 0, 10, 0xf1c40f).setOrigin(0, 0).setScrollFactor(0).setDepth(101);
+    this.xpText = this.add.text(110, 40, 'Nivel 1 - 0/100 XP', { fontSize: '10px', color: '#fff' }).setOrigin(0.5).setScrollFactor(0).setDepth(102);
+    
+    // Info del jugador
+    this.add.text(10, 55, gameState.player.name, { fontSize: '14px', color: '#4ade80' }).setScrollFactor(0).setDepth(100);
+    
+    // Controles
+    this.add.text(CONFIG.width - 10, 10, 'WASD/Flechas: Mover | I: Inventario | C: Crafting | ESPACIO: Atacar', { fontSize: '10px', color: '#aaa' }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+  }
+  
+  spawnEntities() {
+    // Spawn enemigos
+    for (let i = 0; i < 30; i++) {
+      const type = ENEMIES[Math.floor(Math.random() * ENEMIES.length)];
+      const x = Math.random() * CONFIG.worldWidth * CONFIG.tileSize;
+      const y = Math.random() * CONFIG.worldHeight * CONFIG.tileSize;
+      const enemy = this.add.rectangle(x, y, 40, 40, type.color);
+      enemy.setDepth(5);
+      enemy.hp = type.hp;
+      enemy.maxHp = type.hp;
+      enemy.damage = type.damage;
+      enemy.xp = type.xp;
+      enemy.loot = type.loot;
+      enemy.name = type.name;
+      gameState.enemies.push(enemy);
+    }
+    
+    // Spawn recursos
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * CONFIG.worldWidth * CONFIG.tileSize;
+      const y = Math.random() * CONFIG.worldHeight * CONFIG.tileSize;
+      const biome = this.getBiome(Math.floor(x / CONFIG.tileSize), Math.floor(y / CONFIG.tileSize));
+      const resource = biome.resources[Math.floor(Math.random() * biome.resources.length)];
+      const res = this.add.rectangle(x, y, 30, 30, 0x8b4513);
+      res.setDepth(4);
+      res.resource = resource;
+      gameState.resources.push(res);
+    }
+  }
+  
+  update() {
+    const speed = 4;
+    let moved = false;
+    
+    if (this.cursors.left.isDown || this.wasd.A.isDown) { this.player.x -= speed; moved = true; }
+    if (this.cursors.right.isDown || this.wasd.D.isDown) { this.player.x += speed; moved = true; }
+    if (this.cursors.up.isDown || this.wasd.W.isDown) { this.player.y -= speed; moved = true; }
+    if (this.cursors.down.isDown || this.wasd.S.isDown) { this.player.y += speed; moved = true; }
+    
+    // Limites del mundo
+    this.player.x = Phaser.Math.Clamp(this.player.x, 24, CONFIG.worldWidth * CONFIG.tileSize - 24);
+    this.player.y = Phaser.Math.Clamp(this.player.y, 24, CONFIG.worldHeight * CONFIG.tileSize - 24);
+    
+    // Atacar
+    if (Phaser.Input.Keyboard.JustDown(this.space)) {
+      this.attack();
+    }
+    
+    // Inventario
+    if (Phaser.Input.Keyboard.JustDown(this.iKey)) {
+      this.scene.pause();
+      this.scene.launch('InventoryScene');
+    }
+    
+    // Crafting
+    if (Phaser.Input.Keyboard.JustDown(this.cKey)) {
+      this.scene.pause();
+      this.scene.launch('CraftingScene');
+    }
+    
+    // Colisión con recursos
+    this.collectResources();
+    
+    // Actualizar UI
+    this.updateUI();
+  }
+  
+  attack() {
+    const attackRange = 60;
+    gameState.enemies.forEach(enemy => {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      if (dist < attackRange) {
+        const damage = gameState.stats.str + (gameState.equipment.weapon ? ITEMS[gameState.equipment.weapon]?.damage || 0 : 0);
+        enemy.hp -= damage;
+        
+        if (enemy.hp <= 0) {
+          // Drop loot
+          enemy.loot.forEach(item => {
+            this.addToInventory(item, 1);
+          });
+          gameState.stats.xp += enemy.xp;
+          enemy.destroy();
+          gameState.enemies = gameState.enemies.filter(e => e !== enemy);
+          this.checkLevelUp();
+        }
+      }
+    });
+  }
+  
+  collectResources() {
+    gameState.resources.forEach(res => {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, res.x, res.y);
+      if (dist < 40) {
+        this.addToInventory(res.resource, 1);
+        res.destroy();
+        gameState.resources = gameState.resources.filter(r => r !== res);
+        gameState.stats.xp += 2;
+        this.checkLevelUp();
+      }
+    });
+  }
+  
+  addToInventory(itemId, qty) {
+    const existing = gameState.inventory.find(i => i.id === itemId);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      gameState.inventory.push({ id: itemId, qty });
+    }
+  }
+  
+  checkLevelUp() {
+    while (gameState.stats.xp >= gameState.stats.xpNext) {
+      gameState.stats.xp -= gameState.stats.xpNext;
+      gameState.stats.level++;
+      gameState.stats.xpNext = Math.floor(gameState.stats.xpNext * 1.5);
+      gameState.stats.maxHp += 10;
+      gameState.stats.hp = gameState.stats.maxHp;
+      gameState.stats.str += 1;
+      gameState.stats.int += 1;
+      gameState.stats.dex += 1;
+      gameState.stats.vit += 1;
+    }
+  }
+  
+  updateUI() {
+    const hpPercent = gameState.stats.hp / gameState.stats.maxHp;
+    this.hpBar.width = 200 * hpPercent;
+    this.hpText.setText(gameState.stats.hp + '/' + gameState.stats.maxHp);
+    
+    const xpPercent = gameState.stats.xp / gameState.stats.xpNext;
+    this.xpBar.width = 200 * xpPercent;
+    this.xpText.setText('Nivel ' + gameState.stats.level + ' - ' + gameState.stats.xp + '/' + gameState.stats.xpNext + ' XP');
+  }
+}
+
+// ============================================================
+// ESCENA: INVENTARIO
+// ============================================================
+
+class InventoryScene extends Phaser.Scene {
+  constructor() { super({ key: 'InventoryScene' }); }
+  
+  create() {
+    // Fondo oscuro
+    this.add.rectangle(CONFIG.width / 2, CONFIG.height / 2, CONFIG.width, CONFIG.height, 0x000000, 0.8);
+    
+    // Panel de inventario
+    this.add.rectangle(CONFIG.width / 2, CONFIG.height / 2, 600, 500, 0x1a1a2e).setStrokeStyle(2, 0x6366f1);
+    this.add.text(CONFIG.width / 2, 80, '🎒 INVENTARIO', { fontSize: '24px', color: '#fff' }).setOrigin(0.5);
+    
+    // Mostrar items
+    const startX = CONFIG.width / 2 - 250;
+    const startY = 130;
+    const cols = 6;
+    
+    gameState.inventory.forEach((item, i) => {
+      const x = startX + (i % cols) * 80;
+      const y = startY + Math.floor(i / cols) * 70;
+      
+      const itemData = ITEMS[item.id];
+      if (!itemData) return;
+      
+      this.add.rectangle(x, y, 70, 60, 0x2d2d44).setStrokeStyle(1, 0x6366f1);
+      this.add.text(x, y - 10, itemData.icon, { fontSize: '20px' }).setOrigin(0.5);
+      this.add.text(x, y + 15, itemData.name + ' x' + item.qty, { fontSize: '9px', color: '#aaa' }).setOrigin(0.5);
+    });
+    
+    // Stats
+    this.add.text(CONFIG.width / 2, 440, `Nivel: ${gameState.stats.level} | HP: ${gameState.stats.hp}/${gameState.stats.maxHp} | STR: ${gameState.stats.str} | INT: ${gameState.stats.int} | DEX: ${gameState.stats.dex} | VIT: ${gameState.stats.vit}`, { fontSize: '12px', color: '#4ade80' }).setOrigin(0.5);
+    
+    // Cerrar
+    const closeBtn = this.add.rectangle(CONFIG.width / 2, 480, 150, 40, 0xe74c3c).setInteractive();
+    closeBtn.on('pointerdown', () => { this.scene.stop(); this.scene.resume('WorldScene'); });
+    this.add.text(CONFIG.width / 2, 480, 'Cerrar (I)', { fontSize: '14px', color: '#fff' }).setOrigin(0.5);
+    
+    // Cerrar con tecla
+    this.input.keyboard.on('keydown-I', () => { this.scene.stop(); this.scene.resume('WorldScene'); });
+  }
+}
+
+// ============================================================
+// ESCENA: CRAFTING
+// ============================================================
+
+class CraftingScene extends Phaser.Scene {
+  constructor() { super({ key: 'CraftingScene' }); }
+  
+  create() {
+    this.add.rectangle(CONFIG.width / 2, CONFIG.height / 2, CONFIG.width, CONFIG.height, 0x000000, 0.8);
+    this.add.rectangle(CONFIG.width / 2, CONFIG.height / 2, 700, 550, 0x1a1a2e).setStrokeStyle(2, 0x6366f1);
+    this.add.text(CONFIG.width / 2, 60, '🔨 CRAFTING', { fontSize: '24px', color: '#fff' }).setOrigin(0.5);
+    
+    // Categorías
+    const categories = ['cocina', 'herreria', 'carpinteria', 'alquimia', 'sastreria'];
+    const catNames = { cocina: '🍳 Cocina', herreria: '⚔️ Herrería', carpinteria: '🪓 Carpintería', alquimia: '🧪 Alquimia', sastreria: '🧵 Sastrería' };
+    
+    categories.forEach((cat, i) => {
+      const btn = this.add.rectangle(150 + i * 120, 100, 100, 35, 0x2d2d44).setStrokeStyle(1, 0x6366f1).setInteractive();
+      btn.on('pointerdown', () => this.showCategory(cat));
+      this.add.text(150 + i * 120, 100, catNames[cat], { fontSize: '10px', color: '#fff' }).setOrigin(0.5);
+    });
+    
+    this.recipeContainer = this.add.container(0, 0);
+    this.showCategory('cocina');
+    
+    // Cerrar
+    const closeBtn = this.add.rectangle(CONFIG.width / 2, 520, 150, 40, 0xe74c3c).setInteractive();
+    closeBtn.on('pointerdown', () => { this.scene.stop(); this.scene.resume('WorldScene'); });
+    this.add.text(CONFIG.width / 2, 520, 'Cerrar (C)', { fontSize: '14px', color: '#fff' }).setOrigin(0.5);
+    
+    this.input.keyboard.on('keydown-C', () => { this.scene.stop(); this.scene.resume('WorldScene'); });
+  }
+  
+  showCategory(category) {
+    this.recipeContainer.removeAll(true);
+    
+    const recipes = RECIPES.filter(r => r.category === category);
+    recipes.forEach((recipe, i) => {
+      const x = 150 + (i % 4) * 160;
+      const y = 180 + Math.floor(i / 4) * 100;
+      
+      const canCraft = recipe.ingredients.every(ing => {
+        const item = gameState.inventory.find(it => it.id === ing);
+        return item && item.qty >= 1;
+      });
+      
+      const bg = this.add.rectangle(x, y, 140, 80, canCraft ? 0x2d5a27 : 0x5a2d2d).setStrokeStyle(1, 0x6366f1).setInteractive();
+      bg.on('pointerdown', () => this.craft(recipe));
+      
+      this.recipeContainer.add(bg);
+      this.recipeContainer.add(this.add.text(x, y - 20, recipe.name, { fontSize: '11px', color: '#fff' }).setOrigin(0.5));
+      this.recipeContainer.add(this.add.text(x, y + 5, recipe.ingredients.join(', '), { fontSize: '8px', color: '#aaa' }).setOrigin(0.5));
+      this.recipeContainer.add(this.add.text(x, y + 25, canCraft ? '✅ Disponible' : '❌ Faltan', { fontSize: '9px', color: canCraft ? '#4ade80' : '#f87171' }).setOrigin(0.5));
+    });
+  }
+  
+  craft(recipe) {
+    // Verificar ingredientes
+    const canCraft = recipe.ingredients.every(ing => {
+      const item = gameState.inventory.find(it => it.id === ing);
+      return item && item.qty >= 1;
+    });
+    
+    if (!canCraft) return;
+    
+    // Consumir ingredientes
+    recipe.ingredients.forEach(ing => {
+      const item = gameState.inventory.find(it => it.id === ing);
+      if (item) {
+        item.qty--;
+        if (item.qty <= 0) {
+          gameState.inventory = gameState.inventory.filter(i => i.id !== ing);
+        }
+      }
+    });
+    
+    // Dar resultado
+    const existing = gameState.inventory.find(i => i.id === recipe.result);
+    if (existing) {
+      existing.qty++;
+    } else {
+      gameState.inventory.push({ id: recipe.result, qty: 1 });
+    }
+    
+    gameState.stats.xp += recipe.xp;
+    this.showCategory(recipe.category);
+  }
+}
+
+// ============================================================
+// CONFIGURACIÓN DEL JUEGO
+// ============================================================
+
+const config = {
+  type: Phaser.AUTO,
+  width: CONFIG.width,
+  height: CONFIG.height,
+  parent: 'game-container',
+  backgroundColor: '#1a1a2e',
+  physics: { default: 'arcade', arcade: { debug: false } },
+  scene: [CharacterCreationScene, WorldScene, InventoryScene, CraftingScene]
+};
+
+const game = new Phaser.Game(config);
