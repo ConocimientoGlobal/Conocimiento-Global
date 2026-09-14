@@ -1,14 +1,110 @@
 <!DOCTYPE html>
 <html>
-<head><title>Test</title></head>
-<body style="background:red;margin:0">
-<div style="color:white;font-size:24px;padding:20px">
-Hola Mundo<br>
-<span id="hora"></span>
-</div>
+<head><title>PachaMirai</title>
+<style>*{margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden;background:#4caf50}</style>
+</head>
+<body>
+<canvas id="c" style="display:block;width:100%;height:100%"></canvas>
 <script>
-document.getElementById('hora').textContent = 'JS funciona! ' + new Date().toLocaleTimeString();
-alert('JavaScript está ejecutándose');
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+let W,H;
+function resize(){W=window.innerWidth;H=window.innerHeight;c.width=W;c.height=H;}
+window.addEventListener('resize',resize);resize();
+
+let px=W/2,py=H/2;
+let jx=0,jy=0,ja=false,jsX=0,jsY=0,jid=null;
+
+c.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const t=e.changedTouches[0];
+  if(t.clientX<W*0.5){
+    ja=true;jid=t.identifier;jsX=t.clientX;jsY=t.clientY;jx=0;jy=0;
+  }
+},{passive:false});
+
+c.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(!ja)return;
+  for(let i=0;i<e.changedTouches.length;i++){
+    const t=e.changedTouches[i];
+    if(t.identifier===jid){
+      const dx=t.clientX-jsX,dy=t.clientY-jsY;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>20){jx=dx*20/d;jy=dy*20/d;}else{jx=dx/20;jy=dy/20;}
+    }
+  }
+},{passive:false});
+
+c.addEventListener('touchend',e=>{
+  for(let i=0;i<e.changedTouches.length;i++){
+    if(e.changedTouches[i].identifier===jid){ja=false;jx=0;jy=0;jid=null;}
+  }
+},{passive:false});
+
+const keys={};
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+let last=performance.now();
+
+function loop(ts){
+  const dt=Math.min((ts-last)/1000,0.1);
+  last=ts;
+  
+  let mx=0,my=0;
+  if(ja){mx=jx;my=jy;}
+  if(keys['ArrowUp']||keys['w'])my=-1;
+  if(keys['ArrowDown']||keys['s'])my=1;
+  if(keys['ArrowLeft']||keys['a'])mx=-1;
+  if(keys['ArrowRight']||keys['d'])mx=1;
+  
+  if(mx!==0||my!==0){
+    px+=mx*150*dt;
+    py+=my*150*dt;
+    px=Math.max(20,Math.min(W-20,px));
+    py=Math.max(20,Math.min(H-20,py));
+  }
+  
+  // Fondo
+  ctx.fillStyle='#4caf50';ctx.fillRect(0,0,W,H);
+  
+  // Jugador
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath();ctx.ellipse(px,py+15,12,5,0,0,Math.PI*2);ctx.fill();
+  
+  ctx.fillStyle='#5d4037';ctx.fillRect(px-5,py+2,3,8);ctx.fillRect(px+2,py+2,3,8);
+  ctx.fillStyle='#1976d2';ctx.fillRect(px-8,py-8,16,12);
+  ctx.fillStyle='#1565c0';ctx.fillRect(px-8,py-8,16,3);
+  ctx.fillStyle='#ffc107';ctx.fillRect(px-8,py-2,16,2);
+  ctx.fillStyle='#ffe0b2';ctx.fillRect(px-5,py-14,10,6);
+  ctx.fillStyle='#3e2723';ctx.fillRect(px-5,py-16,10,3);
+  ctx.fillStyle='#fff';ctx.fillRect(px-3,py-12,2,2);ctx.fillRect(px+1,py-12,2,2);
+  ctx.fillStyle='#000';ctx.fillRect(px-2,py-11,1,1);ctx.fillRect(px+2,py-11,1,1);
+  ctx.fillStyle='#ffe0b2';ctx.fillRect(px-10,py-6,2,5);ctx.fillRect(px+8,py-6,2,5);
+  
+  // HP
+  ctx.fillStyle='#333';ctx.fillRect(px-15,py-22,30,4);
+  ctx.fillStyle='#4f4';ctx.fillRect(px-14,py-21,28,2);
+  
+  // Debug
+  ctx.fillStyle='#fff';ctx.font='14px monospace';
+  ctx.fillText('px:'+px.toFixed(0)+' py:'+py.toFixed(0),10,25);
+  ctx.fillText('W:'+W+' H:'+H,10,45);
+  ctx.fillText('ja:'+ja+' jx:'+jx.toFixed(2)+' jy:'+jy.toFixed(2),10,65);
+  
+  // Joystick visual
+  if(ja){
+    ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(80,H-80,40,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.beginPath();ctx.arc(80+jx*30,H-80+jy*30,15,0,Math.PI*2);ctx.fill();
+  }
+  
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
