@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PachaMirai — Tactical RPG</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3a1a">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#0a0a1a}
+canvas{display:block;width:100vw;height:100vh}
+#ui{position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:100}
+#ui>div{pointer-events:auto}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="ui"></div>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+<script>
+'use strict';
+
+// ============================================================
+// PACHA MIRAI — Tactical RPG estilo Waven 2.5D
+// Single-file HTML5 + Phaser 3
+// ============================================================
+
+const CONFIG = {
+    TILE_W: 64,
+    TILE_H: 32,
+    MAP_W: 40,
+    MAP_H: 40
+};
+
+// ============================================================
+// ESCENA BOOT — Genera todos los sprites
+// ============================================================
+class BootScene extends Phaser.Scene {
+    constructor() { super('Boot'); }
+
+    preload() {
+        this.generateTextures();
+    }
+
+    generateTextures() {
+        const T = 32;
+
+        // Terreno isometrico (diamond)
+        const tiles = {
+            grass: ['#4caf50', '#66bb6a', '#388e3c'],
+            water: ['#0d47a1', '#1565c0', '#42a5f5'],
+            dirt: ['#8d6e63', '#bcaaa4', '#6d4c41'],
+            stone: ['#616161', '#757575', '#9e9e9e'],
+            sand: ['#e0c878', '#d4b85a', '#c8b040']
+        };
+
+        for (const [name, colors] of Object.entries(tiles)) {
+            const c = this.textures.createCanvas(`tile_${name}`, T, T);
+            const ctx = c.getContext();
+            ctx.fillStyle = colors[0];
+            ctx.beginPath();
+            ctx.moveTo(T/2, 0); ctx.lineTo(T, T/2); ctx.lineTo(T/2, T); ctx.lineTo(0, T/2); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = colors[1];
+            ctx.beginPath();
+            ctx.moveTo(T/2, 2); ctx.lineTo(T-2, T/2); ctx.lineTo(T/2, T-2); ctx.lineTo(2, T/2); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = colors[2];
+            ctx.fillRect(0, T-3, T, 3);
+            c.refresh();
+        }
+
+        // Árbol
+        const tree = this.textures.createCanvas('tree', T, T * 1.5);
+        const tc = tree.getContext();
+        tc.fillStyle = '#5d4037'; tc.fillRect(14, T * 0.7, 4, T * 0.5);
+        tc.fillStyle = '#1b5e20';
+        tc.beginPath(); tc.ellipse(16, T * 0.5, 12, 10, 0, 0, Math.PI * 2); tc.fill();
+        tc.fillStyle = '#2e7d32';
+        tc.beginPath(); tc.ellipse(16, T * 0.4, 8, 7, 0, 0, Math.PI * 2); tc.fill();
+        tc.fillStyle = '#388e3c';
+        tc.beginPath(); tc.ellipse(16, T * 0.35, 5, 4, 0, 0, Math.PI * 2); tc.fill();
+        tree.refresh();
+
+        // Roca
+        const rock = this.textures.createCanvas('rock', T, T * 0.75);
+        const rc = rock.getContext();
+        rc.fillStyle = '#616161';
+        rc.beginPath(); rc.ellipse(T/2, T * 0.5, 12, 8, 0, 0, Math.PI * 2); rc.fill();
+        rc.fillStyle = '#757575';
+        rc.beginPath(); rc.ellipse(T/2, T * 0.45, 10, 6, 0, 0, Math.PI * 2); rc.fill();
+        rc.fillStyle = '#9e9e9e';
+        rc.beginPath(); rc.ellipse(T/2 - 2, T * 0.4, 6, 4, 0, 0, Math.PI * 2); rc.fill();
+        rock.refresh();
+
+        // Flor
+        const flower = this.textures.createCanvas('flower', T * 0.5, T * 0.5);
+        const fc = flower.getContext();
+        fc.fillStyle = '#f44336';
+        fc.beginPath(); fc.arc(T * 0.25, T * 0.25, 4, 0, Math.PI * 2); fc.fill();
+        fc.fillStyle = '#ffeb3b';
+        fc.beginPath(); fc.arc(T * 0.25, T * 0.25, 2, 0, Math.PI * 2); fc.fill();
+        flower.refresh();
+
+        // Personaje Jugador (4 direcciones x 2 frames)
+        const dirs = ['down', 'up', 'left', 'right'];
+        dirs.forEach(dir => {
+            for (let f = 0; f < 2; f++) {
+                const key = `hero_${dir}_${f}`;
+                const c = this.textures.createCanvas(key, T, T * 1.25);
+                const ctx = c.getContext();
+                ctx.clearRect(0, 0, T, T * 1.25);
+                this.drawHero(ctx, dir, f, T);
+                c.refresh();
+            }
+        });
+
+        // Enemigos
+        const enemies = ['goblin', 'skeleton', 'slime', 'wolf'];
+        enemies.forEach(type => {
+            const key = `enemy_${type}`;
+            const c = this.textures.createCanvas(key, T, T);
+            const ctx = c.getContext();
+            ctx.clearRect(0, 0, T, T);
+            this.drawEnemy(ctx, type, T);
+            c.refresh();
+        });
+
+        // Mascotas
+        const pets = ['dragon', 'fairy', 'golem'];
+        pets.forEach(type => {
+            const key = `pet_${type}`;
+            const c = this.textures.createCanvas(key, T, T);
+            const ctx = c.getContext();
+            ctx.clearRect(0, 0, T, T);
+            this.drawPet(ctx, type, T);
+            c.refresh();
+        });
+
+        // Cursor de combate
+        const cursor = this.textures.createCanvas('cursor', T, T);
+        const cc = cursor.getContext();
+        cc.strokeStyle = '#ff5722'; cc.lineWidth = 2;
+        cc.strokeRect(2, 2, T-4, T-4);
+        cc.fillStyle = 'rgba(255,87,34,0.2)';
+        cc.fillRect(2, 2, T-4, T-4);
+        cursor.refresh();
+
+        // Marco de selección
+        const select = this.textures.createCanvas('select', T, T);
+        const sc = select.getContext();
+        sc.strokeStyle = '#4caf50'; cc.lineWidth = 2;
+        sc.strokeRect(1, 1, T-2, T-2);
+        select.refresh();
+
+        // Elementos (fuego, hielo, tierra, aire)
+        const elements = { fire: '#ff5722', ice: '#03a9f4', earth: '#8d6e63', air: '#e0e0e0' };
+        for (const [name, color] of Object.entries(elements)) {
+            const c = this.textures.createCanvas(`spell_${name}`, T * 0.5, T * 0.5);
+            const ctx = c.getContext();
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(T * 0.25, T * 0.25, T * 0.2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath(); ctx.arc(T * 0.2, T * 0.2, T * 0.08, 0, Math.PI * 2); ctx.fill();
+            c.refresh();
+        }
+
+        // HP Bar
+        const hpBar = this.textures.createCanvas('hp_bar', T, 4);
+        const hc = hpBar.getContext();
+        hc.fillStyle = '#333'; hc.fillRect(0, 0, T, 4);
+        hc.fillStyle = '#4f4'; hc.fillRect(0, 0, T, 4);
+        hpBar.refresh();
+    }
+
+    drawHero(ctx, dir, frame, T) {
+        const legOff = frame === 0 ? 0 : 1;
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(T/2, T * 1.1, 8, 3, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Piernas
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(T*0.35, T*0.7, 3, 5 + legOff);
+        ctx.fillRect(T*0.55, T*0.7, 3, 5 + legOff);
+        // Botas
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(T*0.35, T*1.1 + legOff, 3, 2);
+        ctx.fillRect(T*0.55, T*1.1 + legOff, 3, 2);
+
+        // Cuerpo
+        ctx.fillStyle = '#1976d2';
+        ctx.fillRect(T*0.3, T*0.35, T*0.4, T*0.45);
+        ctx.fillStyle = '#1565c0';
+        ctx.fillRect(T*0.3, T*0.35, T*0.4, T*0.1);
+        ctx.fillStyle = '#0d47a1';
+        ctx.fillRect(T*0.3, T*0.65, T*0.4, T*0.1);
+        // Cinturón
+        ctx.fillStyle = '#ffc107';
+        ctx.fillRect(T*0.3, T*0.58, T*0.4, 2);
+
+        // Cabeza
+        ctx.fillStyle = '#ffccbc';
+        ctx.fillRect(T*0.32, T*0.08, T*0.36, T*0.3);
+        ctx.fillStyle = '#ffe0b2';
+        ctx.fillRect(T*0.36, T*0.12, T*0.28, T*0.18);
+
+        // Pelo
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(T*0.3, T*0.04, T*0.4, T*0.1);
+        ctx.fillRect(T*0.3, T*0.04, T*0.4, 2);
+
+        // Ojos según dirección
+        if (dir === 'down' || dir === 'side') {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(T*0.4, T*0.2, 2, 2);
+            ctx.fillRect(T*0.52, T*0.2, 2, 2);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(T*0.42, T*0.22, 1, 1);
+            ctx.fillRect(T*0.54, T*0.22, 1, 1);
+        }
+
+        // Brazos
+        ctx.fillStyle = '#ffccbc';
+        ctx.fillRect(T*0.22, T*0.4, 3, T*0.25);
+        ctx.fillRect(T*0.7, T*0.4, 3, T*0.25);
+    }
+
+    drawEnemy(ctx, type, T) {
+        switch(type) {
+            case 'goblin':
+                ctx.fillStyle = '#4caf50'; ctx.beginPath(); ctx.ellipse(T/2, T*0.7, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#388e3c'; ctx.beginPath(); ctx.ellipse(T*0.7, T*0.4, 6, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#f44336'; ctx.fillRect(T*0.65, T*0.35, 2, 2); ctx.fillRect(T*0.75, T*0.35, 2, 2);
+                ctx.fillStyle = '#4caf50'; ctx.fillRect(T*0.4, T*0.85, 3, 4); ctx.fillRect(T*0.6, T*0.85, 3, 4);
+                break;
+            case 'skeleton':
+                ctx.fillStyle = '#e0e0e0'; ctx.beginPath(); ctx.ellipse(T/2, T*0.6, 8, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#bdbdbd'; ctx.fillRect(T*0.35, T*0.2, 10, 12);
+                ctx.fillStyle = '#212121'; ctx.fillRect(T*0.4, T*0.3, 2, 2); ctx.fillRect(T*0.55, T*0.3, 2, 2);
+                ctx.fillStyle = '#e0e0e0'; ctx.fillRect(T*0.4, T*0.7, 3, 5); ctx.fillRect(T*0.6, T*0.7, 3, 5);
+                break;
+            case 'slime':
+                ctx.fillStyle = '#03a9f4'; ctx.beginPath(); ctx.ellipse(T/2, T*0.8, 12, 8, 0, Math.PI, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#0288d1'; ctx.beginPath(); ctx.ellipse(T/2, T*0.85, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#212121'; ctx.fillRect(T*0.4, T*0.65, 2, 2); ctx.fillRect(T*0.6, T*0.65, 2, 2);
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(T*0.42, T*0.62, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(T*0.62, T*0.62, 1, 0, Math.PI * 2).fill();
+                break;
+            case 'wolf':
+                ctx.fillStyle = '#757575'; ctx.beginPath(); ctx.ellipse(T/2, T*0.7, 12, 7, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#9e9e9e'; ctx.beginPath(); ctx.ellipse(T*0.75, T*0.45, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffc107'; ctx.fillRect(T*0.8, T*0.4, 2, 2);
+                ctx.fillStyle = '#616161'; ctx.fillRect(T*0.35, T*0.85, 3, 3); ctx.fillRect(T*0.65, T*0.85, 3, 3);
+                break;
+        }
+    }
+
+    drawPet(ctx, type, T) {
+        switch(type) {
+            case 'dragon':
+                ctx.fillStyle = '#f44336'; ctx.beginPath(); ctx.ellipse(T/2, T*0.7, 8, 6, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ff5722'; ctx.beginPath(); ctx.ellipse(T*0.7, T*0.45, 5, 5, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#212121'; ctx.fillRect(T*0.72, T*0.42, 1.5, 1.5);
+                ctx.fillStyle = '#f44336';
+                ctx.beginPath(); ctx.moveTo(T*0.5, T*0.3); ctx.lineTo(T*0.4, T*0.1); ctx.lineTo(T*0.6, T*0.25); ctx.closePath().fill();
+                ctx.beginPath(); ctx.moveTo(T*0.6, T*0.3); ctx.lineTo(T*0.7, T*0.1); ctx.lineTo(T*0.75, T*0.25); ctx.closePath().fill();
+                break;
+            case 'fairy':
+                ctx.fillStyle = '#f8bbd0'; ctx.beginPath(); ctx.ellipse(T/2, T*0.7, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#f48fb1'; ctx.beginPath(); ctx.ellipse(T*0.65, T*0.5, 4, 4, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#212121'; ctx.fillRect(T*0.68, T*0.48, 1, 1);
+                ctx.fillStyle = 'rgba(255,193,7,0.5)';
+                ctx.beginPath(); ctx.ellipse(T*0.4, T*0.5, 3, 6, -0.3, 0, Math.PI * 2).fill();
+                ctx.beginPath(); ctx.ellipse(T*0.8, T*0.5, 3, 6, 0.3, 0, Math.PI * 2).fill();
+                break;
+            case 'golem':
+                ctx.fillStyle = '#8d6e63'; ctx.beginPath(); ctx.ellipse(T/2, T*0.7, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#6d4c41'; ctx.fillRect(T*0.3, T*0.2, 12, 10);
+                ctx.fillStyle = '#4caf50'; ctx.fillRect(T*0.4, T*0.35, 2, 2); ctx.fillRect(T*0.6, T*0.35, 2, 2);
+                ctx.fillStyle = '#8d6e63'; ctx.fillRect(T*0.25, T*0.85, 4, 3); ctx.fillRect(T*0.65, T*0.85, 4, 3);
+                break;
+        }
+    }
+
+    create() {
+        this.scene.start('Game');
+    }
+}
+
+// ============================================================
+// ESCENA DEL JUEGO
+// ============================================================
+class GameScene extends Phaser.Scene {
+    constructor() { super('Game'); }
+
+    create() {
+        this.world = [];
+        this.enemies = [];
+        this.pets = [];
+        this.tileSprites = [];
+        this.inCombat = false;
+        this.selectedUnit = null;
+        this.gridCells = [];
+
+        this.generateWorld();
+        this.createWorldVisual();
+        this.createPlayer();
+        this.createEnemies();
+        this.createPets();
+        this.setupCamera();
+        this.setupControls();
+        this.setupUI();
+
+        this.gameTime = 360;
+        this.playerLevel = 1;
+        this.playerXP = 0;
+        this.playerXPNext = 100;
+        this.playerHP = 100;
+        this.playerMaxHP = 100;
+        this.playerMP = 50;
+        this.playerMaxMP = 50;
+        this.playerAP = 6; // Action points per turn
+        this.spells = [
+            { name: 'Bola de Fuego', element: 'fire', cost: 10, damage: 25, range: 4 },
+            { name: 'Escudo de Hielo', element: 'ice', cost: 8, effect: 'shield', range: 0 },
+            { name: 'Terremoto', element: 'earth', cost: 15, damage: 35, range: 3 },
+            { name: 'Rayo de Aire', element: 'air', cost: 12, damage: 20, range: 5 }
+        ];
+        this.activePet = null;
+    }
+
+    generateWorld() {
+        const W = CONFIG.MAP_W, H = CONFIG.MAP_H;
+        for (let y = 0; y < H; y++) {
+            this.world[y] = [];
+            for (let x = 0; x < W; x++) {
+                const v = this.hashCode(x, y);
+                let t = 0; // grass
+                if (v % 15 < 2) t = 1;      // water
+                else if (v % 20 < 2) t = 2;  // dirt
+                else if (v % 25 < 2) t = 3;  // stone
+                else if (v % 30 < 2) t = 4;  // sand
+                else if (v % 12 < 1) t = 5;  // tree
+                else if (v % 18 < 1) t = 6;  // rock
+                else if (v % 22 < 1) t = 7;  // flower
+                this.world[y][x] = t;
+            }
+        }
+    }
+
+    hashCode(x, y) {
+        return ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+    }
+
+    createWorldVisual() {
+        const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+        const W = CONFIG.MAP_W, H = CONFIG.MAP_H;
+
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const t = this.world[y][x];
+                const isoX = (x - y) * (TW / 2);
+                const isoY = (x + y) * (TH / 2);
+
+                let tileName = 'tile_grass';
+                if (t === 1) tileName = 'tile_water';
+                else if (t === 2) tileName = 'tile_dirt';
+                else if (t === 3) tileName = 'tile_stone';
+                else if (t === 4) tileName = 'tile_sand';
+
+                const tile = this.add.image(isoX, isoY, tileName);
+                tile.setDepth(isoY);
+                this.tileSprites.push(tile);
+
+                // Decoración
+                if (t === 5) {
+                    const tree = this.add.image(isoX, isoY - TH * 0.5, 'tree');
+                    tree.setDepth(isoY + 1);
+                } else if (t === 6) {
+                    const rock = this.add.image(isoX, isoY - TH * 0.25, 'rock');
+                    rock.setDepth(isoY + 1);
+                } else if (t === 7) {
+                    const flower = this.add.image(isoX + 8, isoY - 4, 'flower');
+                    flower.setDepth(isoY + 1);
+                }
+            }
+        }
+    }
+
+    createPlayer() {
+        const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+        const startX = Math.floor(CONFIG.MAP_W / 2);
+        const startY = Math.floor(CONFIG.MAP_H / 2);
+        const isoX = (startX - startY) * (TW / 2);
+        const isoY = (startX + startY) * (TH / 2);
+
+        this.player = this.add.sprite(isoX, isoY, 'hero_down_0');
+        this.player.setDepth(1000);
+        this.playerGrid = { x: startX, y: startY };
+        this.playerData = {
+            x: isoX, y: isoY,
+            gridX: startX, gridY: startY,
+            dir: 'down', frame: 0, ft: 0,
+            hp: 100, maxHp: 100,
+            mp: 50, maxMp: 50,
+            ap: 6, maxAp: 6,
+            level: 1, xp: 0, xpNext: 100
+        };
+    }
+
+    createEnemies() {
+        const types = ['goblin', 'skeleton', 'slime', 'wolf'];
+        for (let i = 0; i < 8; i++) {
+            const gx = 5 + (this.hashCode(i, 50) % (CONFIG.MAP_W - 10));
+            const gy = 5 + (this.hashCode(i, 100) % (CONFIG.MAP_H - 10));
+            if (this.world[gy][gx] === 1) continue; // No en agua
+
+            const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+            const isoX = (gx - gy) * (TW / 2);
+            const isoY = (gx + gy) * (TH / 2);
+            const type = types[i % types.length];
+
+            const enemy = this.add.sprite(isoX, isoY, `enemy_${type}`);
+            enemy.setDepth(isoY);
+            this.enemies.push({
+                sprite: enemy, type,
+                gridX: gx, gridY: gy,
+                hp: 30 + i * 5, maxHp: 30 + i * 5,
+                level: 1 + Math.floor(i / 3)
+            });
+        }
+    }
+
+    createPets() {
+        const types = ['dragon', 'fairy', 'golem'];
+        for (let i = 0; i < 3; i++) {
+            const gx = 10 + i * 3;
+            const gy = 10 + i * 2;
+            const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+            const isoX = (gx - gy) * (TW / 2);
+            const isoY = (gx + gy) * (TH / 2);
+
+            const pet = this.add.image(isoX, isoY - 10, `pet_${types[i]}`);
+            pet.setDepth(isoY);
+            pet.setAlpha(0.7);
+            this.pets.push({
+                sprite: pet, type: types[i],
+                gridX: gx, gridY: gy,
+                active: i === 0
+            });
+        }
+        this.activePet = this.pets[0];
+    }
+
+    setupCamera() {
+        const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+        const mapW = CONFIG.MAP_W * TW;
+        const mapH = CONFIG.MAP_H * TH;
+        this.cameras.main.setBounds(-mapW, -mapH, mapW * 2, mapH * 2);
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        this.cameras.main.setZoom(Math.min(this.scale.width / 480, this.scale.height / 270));
+    }
+
+    setupControls() {
+        this.input.on('pointerdown', (pointer) => {
+            if (this.inCombat) {
+                this.handleCombatClick(pointer);
+            } else {
+                this.handleWorldClick(pointer);
+            }
+        });
+
+        this.keys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            space: Phaser.Input.Keyboard.KeyCodes.SPACE
+        });
+    }
+
+    handleWorldClick(pointer) {
+        const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+        const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+        const gx = Math.floor((worldPoint.x / (TW / 2) + worldPoint.y / (TH / 2)) / 2);
+        const gy = Math.floor((worldPoint.y / (TH / 2) - worldPoint.x / (TW / 2)) / 2);
+
+        // Mover jugador hacia tile clickeada
+        if (gx >= 0 && gx < CONFIG.MAP_W && gy >= 0 && gy < CONFIG.MAP_H) {
+            if (this.world[gy][gx] !== 1) { // No agua
+                this.movePlayerTo(gx, gy);
+            }
+        }
+    }
+
+    movePlayerTo(gx, gy) {
+        const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+        const targetX = (gx - gy) * (TW / 2);
+        const targetY = (gx + gy) * (TH / 2);
+
+        this.tweens.add({
+            targets: this.player,
+            x: targetX, y: targetY,
+            duration: 200,
+            onUpdate: () => {
+                this.player.setDepth(this.player.y);
+            },
+            onComplete: () => {
+                this.playerGrid.x = gx;
+                this.playerGrid.y = gy;
+                this.playerData.gridX = gx;
+                this.playerData.gridY = gy;
+                this.checkEnemyEncounter();
+            }
+        });
+    }
+
+    checkEnemyEncounter() {
+        for (const enemy of this.enemies) {
+            const dist = Math.abs(enemy.gridX - this.playerGrid.x) + Math.abs(enemy.gridY - this.playerGrid.y);
+            if (dist <= 2) {
+                this.startCombat(enemy);
+                return;
+            }
+        }
+    }
+
+    startCombat(enemy) {
+        this.inCombat = true;
+        this.combatEnemy = enemy;
+        this.playerData.ap = this.playerData.maxAp;
+        this.showCombatUI();
+    }
+
+    showCombatUI() {
+        const ui = document.getElementById('ui');
+        ui.innerHTML = '';
+
+        // Panel de combate
+        const combatPanel = document.createElement('div');
+        combatPanel.id = 'combat-panel';
+        combatPanel.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200';
+
+        combatPanel.innerHTML = `
+            <div style="color:#fff;font:20px monospace;margin-bottom:20px">⚔️ COMBATE ⚔️</div>
+            <div style="display:flex;gap:40px;margin-bottom:20px">
+                <div style="text-align:center">
+                    <div style="color:#4f4;font:14px monospace">Hero Lv.${this.playerData.level}</div>
+                    <div style="width:60px;height:60px;background:#1976d2;border-radius:8px;margin:5px"></div>
+                    <div style="color:#fff;font:12px monospace">HP: ${this.playerData.hp}/${this.playerData.maxHp}</div>
+                    <div style="color:#fff;font:12px monospace">MP: ${this.playerData.mp}/${this.playerData.maxMp}</div>
+                    <div style="color:#ffeb3b;font:12px monospace">AP: ${this.playerData.ap}</div>
+                </div>
+                <div style="color:#fff;font:24px monospace;display:flex;align-items:center">VS</div>
+                <div style="text-align:center">
+                    <div style="color:#f44;font:14px monospace">${this.combatEnemy.type} Lv.${this.combatEnemy.level}</div>
+                    <div style="width:60px;height:60px;background:#c62828;border-radius:8px;margin:5px"></div>
+                    <div style="color:#fff;font:12px monospace">HP: ${this.combatEnemy.hp}/${this.combatEnemy.maxHp}</div>
+                </div>
+            </div>
+            <div id="combat-actions" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"></div>
+            <div id="combat-log" style="color:#fff;font:12px monospace;margin-top:15px;text-align:center;max-width:300px"></div>
+        `;
+        ui.appendChild(combatPanel);
+
+        // Botones de hechizos
+        const actionsDiv = document.getElementById('combat-actions');
+        this.spells.forEach((spell, i) => {
+            const btn = document.createElement('div');
+            btn.style.cssText = `width:80px;padding:8px;background:rgba(255,255,255,0.1);border:1px solid ${spell.element === 'fire' ? '#ff5722' : spell.element === 'ice' ? '#03a9f4' : spell.element === 'earth' ? '#8d6e63' : '#e0e0e0'};border-radius:6px;color:#fff;font:11px monospace;text-align:center;cursor:pointer`;
+            btn.innerHTML = `${spell.name}<br><span style="color:#aaa">${spell.cost} MP</span>`;
+            btn.onclick = () => this.castSpell(i);
+            actionsDiv.appendChild(btn);
+        });
+
+        // Botón atacar
+        const atkBtn = document.createElement('div');
+        atkBtn.style.cssText = 'width:80px;padding:8px;background:rgba(255,255,255,0.1);border:1px solid #fff;border-radius:6px;color:#fff;font:11px monospace;text-align:center;cursor:pointer';
+        atkBtn.innerHTML = 'Atacar<br><span style="color:#aaa">2 AP</span>';
+        atkBtn.onclick = () => this.attackEnemy();
+        actionsDiv.appendChild(atkBtn);
+
+        // Botón pasar turno
+        const passBtn = document.createElement('div');
+        passBtn.style.cssText = 'width:80px;padding:8px;background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:6px;color:#fff;font:11px monospace;text-align:center;cursor:pointer';
+        passBtn.innerHTML = 'Pasar<br>Turno';
+        passBtn.onclick = () => this.endPlayerTurn();
+        actionsDiv.appendChild(passBtn);
+    }
+
+    castSpell(index) {
+        const spell = this.spells[index];
+        if (this.playerData.mp < spell.cost) {
+            this.combatLog('¡No tienes suficiente MP!');
+            return;
+        }
+        if (this.playerData.ap < 2) {
+            this.combatLog('¡No tienes suficiente AP!');
+            return;
+        }
+
+        this.playerData.mp -= spell.cost;
+        this.playerData.ap -= 2;
+
+        if (spell.damage) {
+            const damage = spell.damage + Math.floor(Math.random() * 10);
+            this.combatEnemy.hp -= damage;
+            this.combatLog(`${spell.name} causa ${damage} de daño!`);
+        }
+
+        this.updateCombatUI();
+        this.checkCombatEnd();
+    }
+
+    attackEnemy() {
+        if (this.playerData.ap < 2) {
+            this.combatLog('¡No tienes suficiente AP!');
+            return;
+        }
+
+        this.playerData.ap -= 2;
+        const damage = 15 + Math.floor(Math.random() * 10);
+        this.combatEnemy.hp -= damage;
+        this.combatLog(`Ataque causa ${damage} de daño!`);
+
+        this.updateCombatUI();
+        this.checkCombatEnd();
+    }
+
+    combatLog(msg) {
+        const log = document.getElementById('combat-log');
+        if (log) log.textContent = msg;
+    }
+
+    updateCombatUI() {
+        const panel = document.getElementById('combat-panel');
+        if (panel) panel.querySelector('#combat-actions').style.opacity = this.playerData.ap < 2 ? '0.5' : '1';
+    }
+
+    checkCombatEnd() {
+        if (this.combatEnemy.hp <= 0) {
+            this.combatLog('¡Victoria! +50 XP');
+            this.playerData.xp += 50;
+            this.combatEnemy.sprite.destroy();
+            this.enemies = this.enemies.filter(e => e !== this.combatEnemy);
+            this.endCombat();
+        } else if (this.playerData.ap <= 0) {
+            this.endPlayerTurn();
+        }
+    }
+
+    endPlayerTurn() {
+        // Turno del enemigo
+        const damage = 8 + Math.floor(Math.random() * 8);
+        this.playerData.hp -= damage;
+        this.combatLog(`El enemigo te causa ${damage} de daño!`);
+
+        if (this.playerData.hp <= 0) {
+            this.playerData.hp = this.playerData.maxHp;
+            this.combatLog('¡Has sido derrotado! Revivas en el punto de control.');
+        }
+
+        this.playerData.ap = this.playerData.maxAp;
+        this.updateCombatUI();
+    }
+
+    endCombat() {
+        this.inCombat = false;
+        this.combatEnemy = null;
+        const panel = document.getElementById('combat-panel');
+        if (panel) panel.remove();
+        this.setupUI();
+    }
+
+    handleCombatClick(pointer) {
+        // Manejo de combate por clicks
+    }
+
+    setupUI() {
+        const ui = document.getElementById('ui');
+        ui.innerHTML = '';
+
+        // Panel superior
+        const panel = document.createElement('div');
+        panel.style.cssText = 'position:fixed;top:8px;left:8px;background:rgba(0,0,0,0.75);padding:8px 12px;border-radius:6px;color:#fff;font:11px monospace;border:1px solid rgba(255,255,255,0.2)';
+        panel.innerHTML = `
+            <div style="margin-bottom:4px">Hero Nv.${this.playerData.level}</div>
+            <div style="margin-bottom:2px">HP: <span id="hp-val">${this.playerData.hp}</span>/${this.playerData.maxHp}</div>
+            <div style="background:#4a0000;width:100px;height:6px;border-radius:3px;margin-bottom:4px"><div id="hp-bar" style="background:linear-gradient(90deg,#e44,#f66);width:100%;height:100%;border-radius:3px"></div></div>
+            <div style="margin-bottom:2px">MP: <span id="mp-val">${this.playerData.mp}</span>/${this.playerData.maxMp}</div>
+            <div style="background:#000a4a;width:100px;height:4px;border-radius:2px;margin-bottom:4px"><div id="mp-bar" style="background:linear-gradient(90deg,#4488ff,#66aaff);width:100%;height:100%;border-radius:2px"></div></div>
+            <div>XP: <span id="xp-val">${this.playerData.xp}</span>/${this.playerData.xpNext}</div>
+            <div style="background:#333;width:100px;height:4px;border-radius:2px"><div id="xp-bar" style="background:linear-gradient(90deg,#ffeb3b,#ffc107);width:${(this.playerData.xp/this.playerData.xpNext)*100}%;height:100%;border-radius:2px"></div></div>
+        `;
+        ui.appendChild(panel);
+
+        // Tiempo
+        const timeEl = document.createElement('div');
+        timeEl.id = 'time';
+        timeEl.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);padding:4px 12px;border-radius:6px;color:#fff;font:14px monospace;border:1px solid rgba(255,255,255,0.2)';
+        timeEl.textContent = '06:00';
+        ui.appendChild(timeEl);
+
+        // Minimap
+        const mm = document.createElement('div');
+        mm.style.cssText = 'position:fixed;top:8px;right:8px;width:80px;height:80px;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.2);border-radius:50%;overflow:hidden';
+        mm.innerHTML = '<canvas id="minimap" width="160" height="160" style="width:100%;height:100%">';
+        ui.appendChild(mm);
+
+        // Mascota activa
+        if (this.activePet) {
+            const petPanel = document.createElement('div');
+            petPanel.style.cssText = 'position:fixed;bottom:60px;left:8px;background:rgba(0,0,0,0.75);padding:6px 10px;border-radius:6px;color:#fff;font:11px monospace;border:1px solid rgba(255,255,255,0.2)';
+            petPanel.innerHTML = `🐾 ${this.activePet.type}`;
+            ui.appendChild(petPanel);
+        }
+
+        // Botones de acción
+        const ab = document.createElement('div');
+        ab.style.cssText = 'position:fixed;bottom:12px;right:12px;display:flex;gap:8px';
+        const b1 = document.createElement('div');
+        b1.style.cssText = 'width:44px;height:44px;border:2px solid rgba(255,255,255,0.5);border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff';
+        b1.textContent = '⚔️';
+        b1.onclick = () => {
+            // Buscar enemigo cercano
+            for (const e of this.enemies) {
+                const dist = Math.abs(e.gridX - this.playerGrid.x) + Math.abs(e.gridY - this.playerGrid.y);
+                if (dist <= 2) { this.startCombat(e); return; }
+            }
+        };
+        ab.appendChild(b1);
+        const b2 = document.createElement('div');
+        b2.style.cssText = 'width:44px;height:44px;border:2px solid rgba(255,255,255,0.5);border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff';
+        b2.textContent = '🎒';
+        b2.onclick = () => this.showInventory();
+        ab.appendChild(b2);
+        ui.appendChild(ab);
+    }
+
+    showInventory() {
+        const ui = document.getElementById('ui');
+        const inv = document.createElement('div');
+        inv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:20px;border-radius:10px;border:2px solid #666;z-index:300;color:#fff;font:14px monospace;text-align:center';
+        inv.innerHTML = `
+            <div style="font-size:18px;margin-bottom:15px">🎒 INVENTARIO</div>
+            <div style="margin-bottom:10px">Nivel: ${this.playerData.level}</div>
+            <div style="margin-bottom:10px">XP: ${this.playerData.xp}/${this.playerData.xpNext}</div>
+            <div style="margin-bottom:15px">Ubicación: ${this.playerGrid.x}, ${this.playerGrid.y}</div>
+            <div style="display:flex;gap:10px;justify-content:center;margin-bottom:15px">
+                ${this.spells.map(s => `<div style="width:60px;padding:5px;background:rgba(255,255,255,0.1);border-radius:4px;font-size:10px">${s.name}</div>`).join('')}
+            </div>
+            <div style="cursor:pointer;padding:8px 16px;background:#1976d2;border-radius:4px" onclick="this.parentElement.remove()">Cerrar</div>
+        `;
+        ui.appendChild(inv);
+    }
+
+    update(time, delta) {
+        const dt = Math.min(delta / 1000, 0.1);
+
+        if (!this.inCombat) {
+            // Movimiento por teclado
+            let mx = 0, my = 0;
+            if (this.keys.up.isDown) my = -1;
+            if (this.keys.down.isDown) my = 1;
+            if (this.keys.left.isDown) mx = -1;
+            if (this.keys.right.isDown) mx = 1;
+
+            if (mx !== 0 || my !== 0) {
+                const newGx = this.playerGrid.x + mx;
+                const newGy = this.playerGrid.y + my;
+                if (newGx >= 0 && newGx < CONFIG.MAP_W && newGy >= 0 && newGy < CONFIG.MAP_H) {
+                    if (this.world[newGy][newGx] !== 1) {
+                        this.movePlayerTo(newGx, newGy);
+                    }
+                }
+            }
+
+            // Animación del jugador
+            this.playerData.ft += dt;
+            if (this.playerData.ft > 0.3) {
+                this.playerData.ft = 0;
+                this.playerData.frame = (this.playerData.frame + 1) % 2;
+                const key = `hero_${this.playerData.dir}_${this.playerData.frame}`;
+                this.player.setTexture(key);
+            }
+
+            // Animación de enemigos
+            for (const e of this.enemies) {
+                e.sprite.y += Math.sin(time * 0.003 + e.gridX) * 0.3;
+            }
+
+            // Mascota sigue al jugador
+            if (this.activePet) {
+                const TW = CONFIG.TILE_W, TH = CONFIG.TILE_H;
+                const targetX = (this.playerGrid.x - this.playerGrid.y - 1) * (TW / 2);
+                const targetY = (this.playerGrid.x + this.playerGrid.y - 1) * (TH / 2);
+                this.activePet.sprite.x += (targetX - this.activePet.sprite.x) * 0.05;
+                this.activePet.sprite.y += (targetY - this.activePet.sprite.y) * 0.05;
+                this.activePet.sprite.setDepth(this.activePet.sprite.y);
+            }
+        }
+
+        // Tiempo
+        this.gameTime += dt * 60;
+        if (this.gameTime >= 1440) this.gameTime = 0;
+        const timeEl = document.getElementById('time');
+        if (timeEl) {
+            const h = Math.floor(this.gameTime / 60);
+            const m = Math.floor(this.gameTime % 60);
+            timeEl.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        // Minimap
+        this.updateMinimap();
+    }
+
+    updateMinimap() {
+        const mc = document.getElementById('minimap');
+        if (!mc) return;
+        const mctx = mc.getContext('2d');
+        mctx.fillStyle = '#1a3a1a';
+        mctx.fillRect(0, 0, 160, 160);
+
+        const range = 15;
+        const ppx = this.playerGrid.x;
+        const ppy = this.playerGrid.y;
+
+        for (let dy = -range; dy <= range; dy++) {
+            for (let dx = -range; dx <= range; dx++) {
+                const wx = ppx + dx, wy = ppy + dy;
+                if (wx < 0 || wx >= CONFIG.MAP_W || wy < 0 || wy >= CONFIG.MAP_H) continue;
+                const t = this.world[wy][wx];
+                if (t === 0) mctx.fillStyle = '#4caf50';
+                else if (t === 1) mctx.fillStyle = '#0288d1';
+                else if (t === 2) mctx.fillStyle = '#8d6e63';
+                else if (t === 3) mctx.fillStyle = '#757575';
+                else if (t === 4) mctx.fillStyle = '#e0c878';
+                else if (t === 5) mctx.fillStyle = '#1b5e20';
+                else continue;
+                mctx.fillRect(80 + dx * 4, 80 + dy * 4, 4, 4);
+            }
+        }
+
+        // Enemigos
+        mctx.fillStyle = '#f44336';
+        for (const e of this.enemies) {
+            const dx = e.gridX - ppx;
+            const dy = e.gridY - ppy;
+            if (Math.abs(dx) <= range && Math.abs(dy) <= range) {
+                mctx.fillRect(80 + dx * 4, 80 + dy * 4, 4, 4);
+            }
+        }
+
+        // Jugador
+        mctx.fillStyle = '#fff';
+        mctx.fillRect(79, 79, 3, 3);
+    }
+}
+
+// ============================================================
+// INICIALIZACIÓN
+// ============================================================
+const config = {
+    type: Phaser.AUTO,
+    parent: 'game',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    pixelArt: true,
+    roundPixels: true,
+    scale: {
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    scene: [BootScene, GameScene],
+    backgroundColor: '#0a0a1a'
+};
+
+const game = new Phaser.Game(config);
+
+window.addEventListener('resize', () => {
+    game.scale.resize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
