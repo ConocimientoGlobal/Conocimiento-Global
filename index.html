@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
-<head><title>PachaMirai Test</title>
+<head><title>PachaMirai</title>
 <style>
 *{margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:red}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
 canvas{display:block;width:100%;height:100%}
 </style>
 </head>
@@ -12,29 +12,78 @@ canvas{display:block;width:100%;height:100%}
 <script>
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
-c.width=window.innerWidth;c.height=window.innerHeight;
 
-// Solo dibujar un círculo en el centro
-ctx.fillStyle='green';
-ctx.fillRect(0,0,c.width,c.height);
-ctx.fillStyle='blue';
-ctx.beginPath();
-ctx.arc(c.width/2,c.height/2,50,0,Math.PI*2);
-ctx.fill();
-ctx.fillStyle='white';
-ctx.font='20px monospace';
-ctx.textAlign='center';
-ctx.fillText('TEST: '+c.width+'x'+c.height,c.width/2,c.height/2);
+function resize(){
+  c.width=window.innerWidth;
+  c.height=window.innerHeight;
+}
+resize();
+window.addEventListener('resize',resize);
 
-requestAnimationFrame(function loop(){
-  ctx.fillStyle='rgba(0,0,0,0.1)';
-  ctx.fillRect(0,0,c.width,c.height);
-  ctx.fillStyle='rgba(255,255,255,0.5)';
+let px=50,py=50;
+let time=0;
+
+function loop(){
+  time++;
+  const W=c.width,H=c.height;
+  
+  // Fondo sólido
+  ctx.fillStyle='#4caf50';
+  ctx.fillRect(0,0,W,H);
+  
+  // Grid de tiles isométricos simples
+  const TW=64,TH=32;
+  const offX=W/2-px*TW/2+py*TW/2;
+  const offY=H/2-px*TH/2-py*TH/2;
+  
+  for(let y=0;y<10;y++){
+    for(let x=0;x<10;x++){
+      const sx=(x-y)*TW/2+offX;
+      const sy=(x+y)*TH/2+offY;
+      
+      // Diamond
+      ctx.beginPath();
+      ctx.moveTo(sx,sy);
+      ctx.lineTo(sx+TW/2,sy+TH/2);
+      ctx.lineTo(sx,sy+TH);
+      ctx.lineTo(sx-TW/2,sy+TH/2);
+      ctx.closePath();
+      
+      if((x+y)%2===0){
+        ctx.fillStyle='#4caf50';
+      } else {
+        ctx.fillStyle='#388e3c';
+      }
+      ctx.fill();
+      ctx.strokeStyle='#2e7d32';
+      ctx.stroke();
+    }
+  }
+  
+  // Jugador (círculo rojo)
+  ctx.fillStyle='red';
   ctx.beginPath();
-  ctx.arc(c.width/2+Math.sin(Date.now()*0.003)*30,c.height/2,10,0,Math.PI*2);
+  ctx.arc(W/2,H/2,20,0,Math.PI*2);
   ctx.fill();
+  ctx.fillStyle='white';
+  ctx.font='14px monospace';
+  ctx.textAlign='center';
+  ctx.fillText('JUGADOR',W/2,H/2+4);
+  
+  // Enemigo (cuadrado azul)
+  ctx.fillStyle='blue';
+  ctx.fillRect(W/2+60,H/2-15,30,30);
+  
+  // Texto debug
+  ctx.fillStyle='white';
+  ctx.font='12px monospace';
+  ctx.textAlign='left';
+  ctx.fillText('W:'+W+' H:'+H+' time:'+time,10,20);
+  
   requestAnimationFrame(loop);
-});
+}
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
