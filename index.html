@@ -95,8 +95,7 @@ function loop(){
       if(dist>VR+0.5)continue;
       
       const biomaId=getBioma(x,y);
-      const bio=BIOMAS[biomaId];
-      
+      const bio=BIOMAS[biomaId]||BIOMAS[0];      
       ctx.beginPath();
       ctx.moveTo(sx,sy);
       ctx.lineTo(sx+TW/2,sy+TH/2);
@@ -221,7 +220,7 @@ function loop(){
   for(let y=0;y<WORLD_H;y+=2){
     for(let x=0;x<WORLD_W;x+=2){
       const biomaId=getBioma(x,y);
-      const b=BIOMAS[biomaId];
+      const b=BIOMAS[biomaId]||BIOMAS[0];
       ctx.fillStyle=world[y][x]===1?b.w:b.t[0];
       ctx.fillRect(mmX+(x/WORLD_W)*mmW,mmY+(y/WORLD_H)*mmH,2,2);
     }
