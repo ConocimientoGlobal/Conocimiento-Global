@@ -34,31 +34,148 @@ function drawDiamond(sx, sy, w, h, fill, stroke) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
 
-function drawChar(sx, sy, color, bo) {
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+function drawPlayer(sx, sy, bo) {
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.beginPath();
-  ctx.ellipse(sx, sy + TH/2 + 4, 10, 4, 0, 0, Math.PI*2);
+  ctx.ellipse(sx, sy + TH/2 + 6, 14, 5, 0, 0, Math.PI*2);
   ctx.fill();
   
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(sx - 4, sy + TH/2 - 8, 3, 8 + bo);
-  ctx.fillRect(sx + 1, sy + TH/2 - 8, 3, 8 + bo);
-  
-  ctx.fillStyle = color || '#1976d2';
-  ctx.fillRect(sx - 6, sy + TH/2 - 20, 12, 14);
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillRect(sx - 6, sy + TH/2 - 20, 12, 4);
-  ctx.fillStyle = '#ffc107';
-  ctx.fillRect(sx - 6, sy + TH/2 - 8, 12, 2);
-  
-  ctx.fillStyle = '#ffe0b2';
-  ctx.fillRect(sx - 4, sy + TH/2 - 26, 8, 7);
+  // Zapatos
   ctx.fillStyle = '#3e2723';
-  ctx.fillRect(sx - 4, sy + TH/2 - 28, 8, 3);
+  ctx.fillRect(sx - 6, sy + TH/2, 5, 4);
+  ctx.fillRect(sx + 1, sy + TH/2, 5, 4);
   
+  // Piernas
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 5, sy + TH/2 - 8, 4, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 4, 9 + bo);
+  
+  // Cuerpo (armadura)
+  ctx.fillStyle = '#1976d2';
+  ctx.fillRect(sx - 8, sy + TH/2 - 22, 16, 16);
+  // Hombreras
+  ctx.fillStyle = '#1565c0';
+  ctx.fillRect(sx - 10, sy + TH/2 - 24, 4, 6);
+  ctx.fillRect(sx + 6, sy + TH/2 - 24, 4, 6);
+  // Cinturón
+  ctx.fillStyle = '#ffc107';
+  ctx.fillRect(sx - 8, sy + TH/2 - 10, 16, 3);
+  ctx.fillStyle = '#ff8f00';
+  ctx.fillRect(sx - 2, sy + TH/2 - 10, 4, 3); // Hebulla
+  
+  // Brazos
+  ctx.fillStyle = '#1976d2';
+  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 12);
+  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 12);
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 4); // Mano izq
+  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 4); // Mano der
+  
+  // Cabeza
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(sx - 5, sy + TH/2 - 32, 10, 9);
+  
+  // Pelo
+  ctx.fillStyle = '#3e2723';
+  ctx.fillRect(sx - 6, sy + TH/2 - 34, 12, 5);
+  ctx.fillRect(sx - 6, sy + TH/2 - 34, 2, 8);
+  ctx.fillRect(sx + 4, sy + TH/2 - 34, 2, 8);
+  
+  // Ojos
   ctx.fillStyle = '#fff';
-  ctx.fillRect(sx - 2, sy + TH/2 - 24, 2, 2);
-  ctx.fillRect(sx + 1, sy + TH/2 - 24, 2, 2);
+  ctx.fillRect(sx - 3, sy + TH/2 - 28, 3, 3);
+  ctx.fillRect(sx + 1, sy + TH/2 - 28, 3, 3);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(sx - 2, sy + TH/2 - 27, 2, 2);
+  ctx.fillRect(sx + 2, sy + TH/2 - 27, 2, 2);
+  // Brillos
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(sx - 2, sy + TH/2 - 27, 1, 1);
+  ctx.fillRect(sx + 2, sy + TH/2 - 27, 1, 1);
+  
+  // Boca
+  ctx.fillStyle = '#d78a7a';
+  ctx.fillRect(sx - 2, sy + TH/2 - 22, 4, 1);
+}
+
+function drawNPC(sx, sy, npc, bo) {
+  const color = npc.color;
+  
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + TH/2 + 6, 14, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Zapatos
+  ctx.fillStyle = '#3e2723';
+  ctx.fillRect(sx - 6, sy + TH/2, 5, 4);
+  ctx.fillRect(sx + 1, sy + TH/2, 5, 4);
+  
+  // Piernas
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 5, sy + TH/2 - 8, 4, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 4, 9 + bo);
+  
+  // Cuerpo
+  ctx.fillStyle = color;
+  ctx.fillRect(sx - 8, sy + TH/2 - 22, 16, 16);
+  // Cuello/Collar
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(sx - 6, sy + TH/2 - 24, 12, 3);
+  // Cinturón
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(sx - 8, sy + TH/2 - 10, 16, 3);
+  
+  // Brazos
+  ctx.fillStyle = color;
+  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 12);
+  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 12);
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 4);
+  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 4);
+  
+  // Cabeza
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(sx - 5, sy + TH/2 - 32, 10, 9);
+  
+  // Pelo según tipo de NPC
+  ctx.fillStyle = '#3e2723';
+  if (npc.nombre === 'Mago' || npc.nombre === 'Bruja') {
+    // Pelo largo/puntoy
+    ctx.fillRect(sx - 7, sy + TH/2 - 36, 14, 8);
+    ctx.fillRect(sx - 8, sy + TH/2 - 32, 3, 10);
+    ctx.fillRect(sx + 5, sy + TH/2 - 32, 3, 10);
+  } else if (npc.nombre === 'Rey') {
+    // Corona
+    ctx.fillStyle = '#ffd600';
+    ctx.fillRect(sx - 6, sy + TH/2 - 36, 12, 6);
+    ctx.fillRect(sx - 6, sy + TH/2 - 38, 2, 3);
+    ctx.fillRect(sx - 1, sy + TH/2 - 39, 2, 4);
+    ctx.fillRect(sx + 4, sy + TH/2 - 38, 2, 3);
+  } else {
+    // Pelo normal
+    ctx.fillRect(sx - 6, sy + TH/2 - 34, 12, 5);
+  }
+  
+  // Ojos
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(sx - 3, sy + TH/2 - 28, 3, 3);
+  ctx.fillRect(sx + 1, sy + TH/2 - 28, 3, 3);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(sx - 2, sy + TH/2 - 27, 2, 2);
+  ctx.fillRect(sx + 2, sy + TH/2 - 27, 2, 2);
+  
+  // Boca
+  ctx.fillStyle = '#d78a7a';
+  ctx.fillRect(sx - 2, sy + TH/2 - 22, 4, 1);
+  
+  // Indicador de interacción (punto encima)
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(sx, sy + TH/2 - 42, 2, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function renderMundo() {
@@ -72,31 +189,27 @@ function renderMundo() {
   const pgx = Math.floor(pl.gx);
   const pgy = Math.floor(pl.gy);
   
-  // Renderizar tiles con fog of war circular y oscurecimiento gradual
-  for (let y = 0; y < WORLD_H; y++) {
-    for (let x = 0; x < WORLD_W; x++) {
+  // Tiles con fog of war circular
+  for (let y = Math.max(0, camCell.y - VISION_RADIO - 2); y < Math.min(WORLD_H, camCell.y + VISION_RADIO + 2); y++) {
+    for (let x = Math.max(0, camCell.x - VISION_RADIO - 2); x < Math.min(WORLD_W, camCell.x + VISION_RADIO + 2); x++) {
       const s = iso(x, y);
       const sx = s.x + cam.x - TW/2;
       const sy = s.y + cam.y - TH/2;
       if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
       
-      // Distancia euclidiana para bordes redondeados
       const dx = x - pgx;
       const dy = y - pgy;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      
-      // Fuera del campo de visión = invisible
       if (dist > VISION_RADIO + 0.5) continue;
       
       const bioma = BIOMAS[getBioma(x, y)];
       const tile = world[y][x];
       const inPath = pl.path.find(p => p.x === x && p.y === y);
       
-      // Calcular opacidad según distancia (1.0 en centro → 0.0 en borde)
+      // Opacidad gradual
       let alpha = 1.0;
-      if (dist > VISION_RADIO - 2) {
-        // Zona de transición: de 1.0 a 0.0 en las últimas 2 tiles
-        alpha = Math.max(0, 1.0 - ((dist - (VISION_RADIO - 2)) / 2.5));
+      if (dist > VISION_RADIO - 3) {
+        alpha = Math.max(0, 1.0 - ((dist - (VISION_RADIO - 3)) / 3.5));
       }
       
       ctx.globalAlpha = alpha;
@@ -126,7 +239,7 @@ function renderMundo() {
     }
   }
   
-  // Cofres (solo si están en visión)
+  // Cofres
   for (const co of cofres) {
     if (co.abierto) continue;
     const dx = co.x - pgx;
@@ -144,7 +257,7 @@ function renderMundo() {
     ctx.fillRect(sx - 5, sy - 3, 10, 2);
   }
   
-  // NPCs (solo si están en visión)
+  // NPCs
   for (const n of npcs) {
     const dx = n.x - pgx;
     const dy = n.y - pgy;
@@ -155,14 +268,14 @@ function renderMundo() {
     const sx = s.x + cam.x;
     const sy = s.y + cam.y;
     if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
-    drawChar(sx, sy, n.color, 0);
+    drawNPC(sx, sy, n, 0);
     ctx.fillStyle = '#fff';
     ctx.font = '7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(n.nombre, sx, sy - 8);
+    ctx.fillText(n.nombre, sx, sy - 12);
   }
   
-  // Jugador (siempre visible)
+  // Jugador
   const ps = iso(pl.fx, pl.fy);
-  drawChar(ps.x + cam.x, ps.y + cam.y, '#1976d2', pl.frame === 0 ? 0 : 1);
+  drawPlayer(ps.x + cam.x, ps.y + cam.y, pl.frame === 0 ? 0 : 1);
 }

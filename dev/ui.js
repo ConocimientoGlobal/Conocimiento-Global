@@ -1,5 +1,5 @@
 // ============================================================================
-// UI - HUD, Minimapa, Mensajes
+// UI - HUD, Minimapa con Fog of War, Mensajes
 // ============================================================================
 
 let mensaje = {titulo: '', texto: '', t: 0};
@@ -66,29 +66,77 @@ function renderUI() {
   ctx.fillText('Bioma: ' + bioma.nombre, 18, H - 45);
   ctx.fillText('Pos: ' + Math.floor(pl.gx) + ',' + Math.floor(pl.gy), 18, H - 30);
   
-  // Minimapa
+  // === MINIMAPA CON FOG OF WAR ===
   const mmW = 100, mmH = 100;
   const mmX = W - mmW - 10, mmY = H - mmH - 10;
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  
+  // Fondo
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
   
-  for (let y = 0; y < WORLD_H; y += 2) {
-    for (let x = 0; x < WORLD_W; x += 2) {
+  // Borde circular del fog
+  const mmCX = mmX + mmW / 2;
+  const mmCY = mmY + mmH / 2;
+  const mmR = mmW / 2 - 2;
+  
+  // Biomas en minimapa con fog circular
+  const cellSize = 2;
+  for (let y = 0; y < WORLD_H; y += 1) {
+    for (let x = 0; x < WORLD_W; x += 1) {
+      // Convertir coordenadas de mundo a coordenadas de minimapa
+      const mx = mmX + (x / WORLD_W) * mmW;
+      const my = mmY + (y / WORLD_H) * mmH;
+      
+      // Distancia al centro del minimapa (posición del jugador)
+      const dx = mx - mmCX;
+      const dy = my - mmCY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      // Solo mostrar si está dentro del radio circular
+      if (dist > mmR) continue;
+      
       const b = BIOMAS[getBioma(x, y)];
       ctx.fillStyle = b.color1;
-      ctx.fillRect(mmX + (x / WORLD_W) * mmW, mmY + (y / WORLD_H) * mmH, 2, 2);
+      ctx.fillRect(mx, my, cellSize, cellSize);
     }
   }
   
+  // Fog circular en minimapa: oscurecer fuera del radio del jugador
+  const fogRadius = (VISION_RADIO / WORLD_W) * mmW;
+  const fogInner = fogRadius - 4;
+  
+  // Gradiente circular para bordes suaves
+  const gradient = ctx.createRadialGradient(mmCX, mmCY, fogInner, mmCX, mmCY, fogRadius + 4);
+  gradient.addColorStop(0, 'rgba(0,0,0,0)');
+  gradient.addColorStop(0.6, 'rgba(0,0,0,0.3)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(mmCX, mmCY, fogRadius + 4, 0, Math.PI * 2);
+  ctx.fill();
+  
   // Jugador en minimapa
   ctx.fillStyle = '#ff0';
-  ctx.fillRect(mmX + (pl.gx / WORLD_W) * mmW - 2, mmY + (pl.gy / WORLD_H) * mmH - 2, 4, 4);
+  ctx.fillRect(mmCX - 3, mmCY - 3, 6, 6);
   
-  // NPCs en minimapa
+  // NPCs en minimapa (solo si están en visión circular)
   ctx.fillStyle = '#0ff';
   for (const n of npcs) {
-    ctx.fillRect(mmX + (n.x / WORLD_W) * mmW - 1, mmY + (n.y / WORLD_H) * mmH - 1, 2, 2);
+    const nmx = mmX + (n.x / WORLD_W) * mmW;
+    const nmy = mmY + (n.y / WORLD_H) * mmH;
+    const ndx = nmx - mmCX;
+    const ndy = nmy - mmCY;
+    const ndist = Math.sqrt(ndx*ndx + ndy*ndy);
+    if (ndist <= fogRadius) {
+      ctx.fillRect(nmx - 1, nmy - 1, 2, 2);
+    }
   }
+  
+  // Leyenda
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Mapa', mmX + 2, mmY - 5);
   
   // Mensaje flotante
   if (mensaje.t > 0) {
