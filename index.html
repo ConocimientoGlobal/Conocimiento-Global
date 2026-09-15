@@ -90,23 +90,25 @@ function loop(ts){
   const dt=Math.min((ts-last)/1000,0.1);
   last=ts;
   
-  // Avanzar por el camino (lento y preciso)
+  // Movimiento: 1 celda a la vez, interpolación suave
   if(pl.path.length>0){
     const t=pl.path[0];
-    const sp=3*dt; // Más lento
-    if(pl.px<t.x)pl.px=Math.min(t.x,pl.px+sp);else if(pl.px>t.x)pl.px=Math.max(t.x,pl.px-sp);
-    if(pl.py<t.y)pl.py=Math.min(t.y,pl.py+sp);else if(pl.py>t.y)pl.py=Math.max(t.y,pl.py-sp);
+    pl.mt = (pl.mt||0) + dt;
+    const duration = 0.35;
+    const p = Math.min(pl.mt/duration, 1);
+    const e = p<0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
     
-    // Detectar llegada
-    if(Math.abs(pl.px-t.x)<0.03&&Math.abs(pl.py-t.y)<0.03){
-      pl.px=t.x;pl.py=t.y; // Snap a la celda
-      pl.gx=t.x;pl.gy=t.y;
-      pl.path.shift();
+    pl.px = pl.gx + (t.x-pl.gx)*e;
+    pl.py = pl.gy + (t.y-pl.gy)*e;
+    
+    if(p>=1){
+      pl.gx=t.x;pl.gy=t.y;pl.px=t.x;pl.py=t.y;
+      pl.path.shift();pl.mt=0;
     }
     
-    // Frame de animación de caminar
+    // Frame de animación
     pl.ft+=dt;
-    if(pl.ft>0.15){pl.ft=0;pl.frame=(pl.frame+1)%2;}
+    if(pl.ft>0.12){pl.ft=0;pl.frame=(pl.frame+1)%2;}
   }
   
   ctx.fillStyle='#0d1b0d';ctx.fillRect(0,0,W,H);
