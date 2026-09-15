@@ -138,7 +138,7 @@ function loop(){
         ctx.ellipse(sx+4,sy+TH/2,10,4,0.3,0,Math.PI*2);
         ctx.fill();
         
-        const tipo=getBioma(x,y)===1&&v%2===0?'pino':getBiome(x,y)===2?'palmera':'roble';
+        const tipo=getBioma(x,y)===1&&v%2===0?'pino':getBioma(x,y)===2?'palmera':'roble';
         
         if(tipo==='pino'){
           ctx.fillStyle='#5d4037';ctx.fillRect(sx-2,sy-10,4,12);
