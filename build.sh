@@ -19,7 +19,8 @@ canvas{display:block;position:fixed;top:0;left:0}
 <script>
 EOF
 
-for f in dev/config.js dev/biomas.js dev/texturas.js dev/mundo.js dev/render.js dev/jugador.js dev/ui.js dev/guardado.js dev/main.js; do
+# Orden correcto: dependencias primero
+for f in dev/config.js dev/biomas.js dev/mundo.js dev/texturas.js dev/render.js dev/jugador.js dev/ui.js dev/guardado.js dev/main.js; do
   echo "// === $f ===" >> index.html
   cat "$f" >> index.html
   echo "" >> index.html
