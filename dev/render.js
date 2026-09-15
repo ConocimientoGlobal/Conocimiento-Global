@@ -1,5 +1,5 @@
 // ============================================================================
-// RENDER - Proyección isométrica y dibujado
+// RENDER - Proyección isométrica, dibujado y Fog of War
 // ============================================================================
 
 let ctx;
@@ -23,6 +23,11 @@ function screenToCell(sx, sy) {
   };
 }
 
+// Distancia Manhattan para el campo de visión
+function distanciaVision(x1, y1, x2, y2) {
+  return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+}
+
 function drawDiamond(sx, sy, w, h, fill, stroke) {
   ctx.beginPath();
   ctx.moveTo(sx, sy);
@@ -35,18 +40,15 @@ function drawDiamond(sx, sy, w, h, fill, stroke) {
 }
 
 function drawChar(sx, sy, color, bo) {
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(sx, sy + TH/2 + 4, 10, 4, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Piernas
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(sx - 4, sy + TH/2 - 8, 3, 8 + bo);
   ctx.fillRect(sx + 1, sy + TH/2 - 8, 3, 8 + bo);
   
-  // Cuerpo
   ctx.fillStyle = color || '#1976d2';
   ctx.fillRect(sx - 6, sy + TH/2 - 20, 12, 14);
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -54,13 +56,11 @@ function drawChar(sx, sy, color, bo) {
   ctx.fillStyle = '#ffc107';
   ctx.fillRect(sx - 6, sy + TH/2 - 8, 12, 2);
   
-  // Cabeza
   ctx.fillStyle = '#ffe0b2';
   ctx.fillRect(sx - 4, sy + TH/2 - 26, 8, 7);
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(sx - 4, sy + TH/2 - 28, 8, 3);
   
-  // Ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(sx - 2, sy + TH/2 - 24, 2, 2);
   ctx.fillRect(sx + 1, sy + TH/2 - 24, 2, 2);
@@ -69,17 +69,24 @@ function drawChar(sx, sy, color, bo) {
 function renderMundo() {
   const cam = getCamera();
   const camCell = screenToCell(W/2, H/2);
-  const viewDist = 10;
   
-  ctx.fillStyle = '#0d1b0d';
+  // Limpiar con negro
+  ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
   
-  for (let y = Math.max(0, camCell.y - viewDist); y < Math.min(WORLD_H, camCell.y + viewDist); y++) {
-    for (let x = Math.max(0, camCell.x - viewDist); x < Math.min(WORLD_W, camCell.x + viewDist); x++) {
+  const pgx = Math.floor(pl.gx);
+  const pgy = Math.floor(pl.gy);
+  
+  for (let y = Math.max(0, camCell.y - VISION_RADIO); y < Math.min(WORLD_H, camCell.y + VISION_RADIO); y++) {
+    for (let x = Math.max(0, camCell.x - VISION_RADIO); x < Math.min(WORLD_W, camCell.x + VISION_RADIO); x++) {
       const s = iso(x, y);
       const sx = s.x + cam.x - TW/2;
       const sy = s.y + cam.y - TH/2;
       if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
+      
+      // Fog of war: solo renderizar si está dentro del campo de visión
+      const dist = distanciaVision(x, y, pgx, pgy);
+      if (dist > VISION_RADIO) continue;
       
       const bioma = BIOMAS[getBioma(x, y)];
       const tile = world[y][x];
@@ -108,9 +115,10 @@ function renderMundo() {
     }
   }
   
-  // Cofres
+  // Cofres (solo si están en visión)
   for (const co of cofres) {
     if (co.abierto) continue;
+    if (distanciaVision(co.x, co.y, pgx, pgy) > VISION_RADIO) continue;
     const s = iso(co.x, co.y);
     const sx = s.x + cam.x;
     const sy = s.y + cam.y;
@@ -121,8 +129,9 @@ function renderMundo() {
     ctx.fillRect(sx - 5, sy - 3, 10, 2);
   }
   
-  // NPCs
+  // NPCs (solo si están en visión)
   for (const n of npcs) {
+    if (distanciaVision(n.x, n.y, pgx, pgy) > VISION_RADIO) continue;
     const s = iso(n.x, n.y);
     const sx = s.x + cam.x;
     const sy = s.y + cam.y;
@@ -134,7 +143,7 @@ function renderMundo() {
     ctx.fillText(n.nombre, sx, sy - 8);
   }
   
-  // Jugador
+  // Jugador (siempre visible)
   const ps = iso(pl.fx, pl.fy);
   drawChar(ps.x + cam.x, ps.y + cam.y, '#1976d2', pl.frame === 0 ? 0 : 1);
 }

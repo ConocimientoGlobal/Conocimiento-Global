@@ -8,12 +8,16 @@ const WORLD_H = 64;
 let W, H;
 let TW, TH;
 
+// Campo de visión (en tiles)
+const VISION_RADIO = 8;
+
 function calcularTileSize() {
   const c = document.getElementById('c');
   const ctx = c.getContext('2d');
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
-  const TILE = Math.min(W, H) / 16;
+  // Tiles más grandes (12 en vez de 16)
+  const TILE = Math.min(W, H) / 12;
   TW = TILE;
   TH = TILE / 2;
 }
