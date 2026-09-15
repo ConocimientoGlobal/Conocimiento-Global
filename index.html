@@ -11,22 +11,22 @@
 <script>
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
-const PS=4; // tamaño del pixel 16-bit
 
 function resize(){c.width=window.innerWidth;c.height=window.innerHeight;}
 resize();
 window.addEventListener('resize',resize);
 
-const WORLD_W=64,WORLD_H=64,VR=12;
+const WORLD_W=64,WORLD_H=64,VR=10;
 
+// === PALETA CALIDA 16-BIT ===
 const BIOMAS=[
-  {id:0,n:'Pueblo',t:['#4caf50','#388e3c','#66bb6a'],w:'#0288d1'},
-  {id:1,n:'Bosque',t:['#2e7d32','#1b5e20','#388e3c'],w:'#1565c0'},
-  {id:2,n:'Desierto',t:['#f9a825','#f57f17','#ffb300'],w:'#0288d1'},
-  {id:3,n:'Montaña',t:['#9e9e9e','#757575','#bdbdbd'],w:'#1565c0'},
-  {id:4:n:'Pantano',t:['#5d4037','#4e342e','#6d4c41'],w:'#0277bd'},
-  {id:5,n:'Volcan',t:['#d84315','#bf360c','#e64a19'],w:'#d84315'},
-  {id:6,n:'Castillo',t:['#37474f','#263238','#455a64'],w:'#1565c0'}
+  {id:0,n:'Pueblo',t:['#4caf50','#388e3c','#66bb6a','#8bc34a'],w:'#0288d1',s:['#7cb342','#689f38','#9ccc65']},
+  {id:1,n:'Bosque',t:['#2e7d32','#1b5e20','#388e3c','#43a047'],w:'#1565c0',s:['#7cb342','#689f38','#558b2f']},
+  {id:2,n:'Desierto',t:['#f9a825','#f57f17','#ffb300','#ff8f00'],w:'#0288d1',s:['#a1887f','#b8860b','#cd853f']},
+  {id:3,n:'Montaña',t:['#9e9e9e','#757575','#bdbdbd','#616161'],w:'#1565c0',s:['#757575','#616161','#fff']},
+  {id:4,n:'Pantano',t:['#5d4037','#4e342e','#6d4c41','#3e2723'],w:'#0277bd',s:['#5d4037','#4e342e','#795548']},
+  {id:5,n:'Volcan',t:['#d84315','#bf360c','#e64a19','#f4511e'],w:'#d84315',s:['#424242','#616161','#ff6f00']},
+  {id:6,n:'Castillo',t:['#37474f','#263238','#455a64','#546e7a'],w:'#1565c0',s:['#37474f','#263238','#455a64']}
 ];
 
 function getBioma(x,y){
@@ -34,24 +34,40 @@ function getBioma(x,y){
   return m[Math.min(7,Math.floor(y/8))][Math.min(7,Math.floor(x/8))];
 }
 
+// === MUNDO ===
 const world=[];
 for(let y=0;y<WORLD_H;y++){
   world[y]=[];
   for(let x=0;x<WORLD_W;x++){
     if(x<1||x>=WORLD_W-1||y<1||y>=WORLD_H-1)world[y][x]=1;
-    else{const v=((x*37+y*67)^0x5bf03635)>>>0;world[y][x]=(v%20<1)?1:0;}
+    else{const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;world[y][x]=(v%20<1)?1:0;}
   }
 }
 world[8][8]=0;
 
+const npcs=[
+  {x:6,y:6,n:'Herrero',c:'#e53935'},
+  {x:9,y:7,n:'Mago',c:'#8e24aa'},
+  {x:7,y:9,n:'Comerciante',c:'#ffb300'}
+];
+
+const cofres=[
+  {x:10,y:10,o:false},
+  {x:25,y:18,o:false},
+  {x:40,y:22,o:false}
+];
+
 const pl={gx:8,gy:8,fx:8,fy:8,path:[],frame:0,ft:0,hp:100};
 
+let frameCount=0;
+
 function loop(){
+  frameCount++;
   const W=c.width,H=c.height;
   const TW=Math.min(W,H)/4;
   const TH=TW/2;
   
-  ctx.fillStyle='#000';
+  ctx.fillStyle='#0d1b0d';
   ctx.fillRect(0,0,W,H);
   
   // Movimiento
@@ -65,19 +81,21 @@ function loop(){
     if(pl.ft>0.15){pl.ft=0;pl.frame=(pl.frame+1)%2;}
   }
   
-  // Cámara
+  // Camara
   const camX=W/2-(pl.fx-pl.fy)*TW/2;
   const camY=H/2-(pl.fx+pl.fy)*TH/2;
   
   const pgx=Math.floor(pl.gx),pgy=Math.floor(pl.gy);
   
-  // Tiles
-  for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR);y++){
-    for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR);x++){
+  // === TILES con textura pixel art ===
+  for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR+2);y++){
+    for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR+2);x++){
       const sx=(x-y)*TW/2+camX;
       const sy=(x+y)*TH/2+camY;
       
-      // Diamante
+      const dist=Math.sqrt((x-pgx)*(x-pgx)+(y-pgy)*(y-pgy));
+      if(dist>VR+0.5)continue;
+      
       ctx.beginPath();
       ctx.moveTo(sx,sy);
       ctx.lineTo(sx+TW/2,sy+TH/2);
@@ -86,50 +104,238 @@ function loop(){
       ctx.closePath();
       
       if(world[y][x]===1){
-        ctx.fillStyle=BIOMAS[getBioma(x,y)].w;
+        // Agua con variacion
+        const bio=BIOMAS[getBioma(x,y)];
+        const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
+        ctx.fillStyle=bio.w;
         ctx.fill();
-        ctx.strokeStyle='rgba(100,180,220,0.3)';
+        
+        // Ondas
+        ctx.fillStyle='rgba(255,255,255,0.2)';
+        const wave=Math.sin((frameCount*0.05)+(x+y)*0.5)*2;
+        ctx.fillRect(sx-6+wave,sy+TH/3,4,1);
+        
+        // Peces en mar
+        if(getBioma(x,y)===2&&v%7<2){
+          const px=sx-6+((frameCount*0.2+v)%12);
+          ctx.fillStyle='#ff8f00';
+          ctx.fillRect(px,sy+TH/3,3,2);
+        }
+        
+        ctx.strokeStyle='rgba(100,180,220,0.25)';
         ctx.lineWidth=1;
         ctx.stroke();
       }else{
+        // Tierra con variacion de color
         const bio=BIOMAS[getBioma(x,y)];
-        const v=((x*37+y*67)^0x5bf03635)>>>0;
-        ctx.fillStyle=bio.t[v%bio.t.length];
+        const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
+        const colorIdx=(v%bio.t.length);
+        ctx.fillStyle=bio.t[colorIdx];
         ctx.fill();
-        ctx.strokeStyle='rgba(0,0,0,0.1)';
+        
+        // Brillo superior (volumen)
+        ctx.beginPath();
+        ctx.moveTo(sx,sy);
+        ctx.lineTo(sx+TW/2,sy+TH/2);
+        ctx.lineTo(sx,sy+TH/2);
+        ctx.lineTo(sx-TW/2,sy+TH/2);
+        ctx.closePath();
+        ctx.fillStyle='rgba(255,255,255,0.06)';
+        ctx.fill();
+        
+        // Sombra inferior
+        ctx.beginPath();
+        ctx.moveTo(sx,sy+TH);
+        ctx.lineTo(sx+TW/2,sy+TH/2);
+        ctx.lineTo(sx+TW/2,sy+TH+2);
+        ctx.lineTo(sx-TW/2,sy+TH+2);
+        ctx.lineTo(sx-TW/2,sy+TH/2);
+        ctx.closePath();
+        ctx.fillStyle='rgba(0,0,0,0.1)';
+        ctx.fill();
+        
+        // Textura de grano
+        if(v%5===0){
+          ctx.fillStyle='rgba(0,0,0,0.05)';
+          ctx.fillRect(sx-4+(v%8),sy+TH/4+(v%4),2,2);
+        }
+        
+        ctx.strokeStyle='rgba(0,0,0,0.08)';
         ctx.lineWidth=1;
         ctx.stroke();
+      }
+      
+      // Path highlight
+      if(pl.path.find(p=>p.x===x&&p.y===y)){
+        ctx.fillStyle='rgba(255,255,0,0.25)';
+        ctx.beginPath();
+        ctx.moveTo(sx,sy);
+        ctx.lineTo(sx+TW/2,sy+TH/2);
+        ctx.lineTo(sx,sy+TH);
+        ctx.lineTo(sx-TW/2,sy+TH/2);
+        ctx.closePath();
+        ctx.fill();
       }
     }
   }
   
-  // Jugador
+  // === ARBOLES con textura ===
+  for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR);y++){
+    for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR);x++){
+      const dist=Math.sqrt((x-pgx)*(x-pgx)+(y-pgy)*(y-pgy));
+      if(dist>VR)continue;
+      if(world[y][x]!==0)continue;
+      
+      const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
+      if(v%100<10){
+        const sx=(x-y)*TW/2+camX;
+        const sy=(x+y)*TH/2+camY;
+        const biome=getBioma(x,y);
+        
+        // Sombra
+        ctx.fillStyle='rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(sx+4,sy+TH/2,10,4,0.3,0,Math.PI*2);
+        ctx.fill();
+        
+        const tipo=biome===1&&v%2===0?'pino':biome===2?'palmera':'roble';
+        
+        if(tipo==='pino'){
+          ctx.fillStyle='#5d4037';
+          ctx.fillRect(sx-2,sy-10,4,12);
+          ctx.fillStyle='#4e342e';
+          ctx.fillRect(sx-2,sy-10,2,12);
+          ctx.fillStyle='#2e7d32';
+          ctx.beginPath();ctx.moveTo(sx,sy-28);ctx.lineTo(sx-10,sy-8);ctx.lineTo(sx+10,sy-8);ctx.closePath();ctx.fill();
+          ctx.fillStyle='#388e3c';
+          ctx.beginPath();ctx.moveTo(sx,sy-23);ctx.lineTo(sx-7,sy-10);ctx.lineTo(sx+7,sy-10);ctx.closePath();ctx.fill();
+          // Hojitas
+          ctx.fillStyle='#43a047';
+          ctx.fillRect(sx-3,sy-18,2,2);
+          ctx.fillRect(sx+2,sy-16,2,2);
+        }else if(tipo==='palmera'){
+          ctx.fillStyle='#8d6e63';
+          ctx.fillRect(sx-3,sy-12,6,14);
+          ctx.fillStyle='#4caf50';
+          ctx.fillRect(sx-14,sy-16,8,2);
+          ctx.fillRect(sx+6,sy-16,8,2);
+          ctx.fillRect(sx-4,sy-22,8,2);
+        }else{
+          ctx.fillStyle='#5d4037';
+          ctx.fillRect(sx-3,sy-8,6,10);
+          ctx.fillStyle='#4e342e';
+          ctx.fillRect(sx-3,sy-8,3,10);
+          ctx.fillStyle='#388e3c';
+          ctx.beginPath();ctx.arc(sx,sy-18,10,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,0.1)';
+          ctx.beginPath();ctx.arc(sx-3,sy-20,3,0,Math.PI*2);ctx.fill();
+        }
+      }
+    }
+  }
+  
+  // === NPCs ===
+  for(const n of npcs){
+    const dist=Math.sqrt((n.x-pgx)*(n.x-pgx)+(n.y-pgy)*(n.y-pgy));
+    if(dist>VR)continue;
+    const sx=(n.x-n.y)*TW/2+camX;
+    const sy=(n.x+n.y)*TH/2+camY;
+    
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath();ctx.ellipse(sx,sy+TH/2,6,3,0,0,Math.PI*2);ctx.fill();
+    
+    ctx.fillStyle=n.c;
+    ctx.fillRect(sx-5,sy+TH/2-14,10,10);
+    ctx.fillStyle='#ffe0b2';
+    ctx.fillRect(sx-3,sy+TH/2-19,6,5);
+    ctx.fillStyle='#fff';
+    ctx.fillRect(sx-2,sy+TH/2-17,2,1);
+    ctx.fillRect(sx+1,sy+TH/2-17,2,1);
+    ctx.fillStyle='#ffd700';
+    ctx.beginPath();ctx.arc(sx,sy+TH/2-24,2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='6px monospace';
+    ctx.textAlign='center';
+    ctx.fillText(n.n,sx,sy-8);
+  }
+  
+  // === JUGADOR ===
   const px=(pl.fx-pl.fy)*TW/2+camX;
   const py=(pl.fx+pl.fy)*TH/2+camY;
+  const bo=pl.frame===0?0:1;
   
   ctx.fillStyle='rgba(0,0,0,0.3)';
-  ctx.beginPath();ctx.ellipse(px,py+TH/2,TW/8,TH/8,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(px,py+TH/2,7,3,0,0,Math.PI*2);ctx.fill();
+  
+  ctx.fillStyle='#5d4037';
+  ctx.fillRect(px-3,py+TH/2-8,2,8+bo);
+  ctx.fillRect(px+1,py+TH/2-8,2,8+bo);
   
   ctx.fillStyle='#1976d2';
-  ctx.fillRect(px-TW/10,py+TH/2-TH/1.5,TW/5,TH/2.5);
+  ctx.fillRect(px-7,py+TH/2-20,14,14);
+  
+  ctx.fillStyle='#ffc107';
+  ctx.fillRect(px-7,py+TH/2-8,14,2);
   
   ctx.fillStyle='#ffe0b2';
-  ctx.fillRect(px-TW/16,py+TH/2-TH/1.2,TW/8,TH/6);
-  
+  ctx.fillRect(px-4,py+TH/2-26,8,6);
+  ctx.fillStyle='#3e2723';
+  ctx.fillRect(px-5,py+TH/2-28,10,3);
   ctx.fillStyle='#fff';
-  ctx.fillRect(px-TW/25,py+TH/2-TH/1.4,2,2);
-  ctx.fillRect(px+TW/50,py+TH/2-TH/1.4,2,2);
+  ctx.fillRect(px-2,py+TH/2-24,2,2);
+  ctx.fillRect(px+1,py+TH/2-24,2,2);
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillRect(px-1,py+TH/2-23,1,1);
+  ctx.fillRect(px+2,py+TH/2-23,1,1);
   
-  // UI
-  ctx.fillStyle='rgba(0,0,0,0.8)';
-  ctx.fillRect(10,10,100,35);
+  // === UI ===
+  ctx.fillStyle='rgba(0,0,0,0.85)';
+  ctx.fillRect(10,10,140,50);
   ctx.fillStyle='#fff';
-  ctx.font='10px monospace';
-  ctx.fillText('Lv.1 Hero',15,22);
+  ctx.font='bold 12px monospace';
+  ctx.textAlign='left';
+  ctx.textBaseline='middle';
+  ctx.fillText('Lv.1 Hero',18,24);
   ctx.fillStyle='#4a0000';
-  ctx.fillRect(15,28,90,4);
+  ctx.fillRect(18,32,120,6);
   ctx.fillStyle='#e44';
-  ctx.fillRect(16,29,88*pl.hp/100,2);
+  ctx.fillRect(19,33,118,4);
+  ctx.fillStyle='#fff';
+  ctx.font='7px monospace';
+  ctx.fillText('100/100',65,37);
+  
+  ctx.fillStyle='#ffd700';
+  ctx.font='10px monospace';
+  ctx.fillText('Oro: 50',18,47);
+  
+  // Info
+  ctx.fillStyle='#0f0';
+  ctx.font='9px monospace';
+  ctx.textAlign='left';
+  ctx.fillText('Pos:'+Math.floor(pl.gx)+','+Math.floor(pl.gy),10,H-15);
+  
+  // Minimapa
+  const mmW=100,mmH=100;
+  const mmX=W-mmW-10,mmY=H-mmH-10;
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillRect(mmX,mmY,mmW,mmH);
+  
+  for(let y=0;y<WORLD_H;y+=2){
+    for(let x=0;x<WORLD_W;x+=2){
+      const b=BIOMAS[getBioma(x,y)];
+      if(world[y][x]===1){
+        ctx.fillStyle=b.w;
+      }else{
+        ctx.fillStyle=b.t[0];
+      }
+      ctx.fillRect(mmX+(x/WORLD_W)*mmW,mmY+(y/WORLD_H)*mmH,2,2);
+    }
+  }
+  ctx.fillStyle='#ff0';
+  ctx.fillRect(mmX+(pl.gx/WORLD_W)*mmW-2,mmY+(pl.gy/WORLD_H)*mmH-2,4,4);
+  ctx.strokeStyle='#fff';
+  ctx.lineWidth=1;
+  ctx.strokeRect(mmX,mmY,mmW,mmH);
   
   requestAnimationFrame(loop);
 }
@@ -137,10 +343,10 @@ function loop(){
 c.addEventListener('touchstart',e=>{
   e.preventDefault();
   if(pl.path.length>0)return;
-  
   const W=c.width,H=c.height;
   const TW=Math.min(W,H)/4;
   const TH=TW/2;
+  
   const camX=W/2-(pl.fx-pl.fy)*TW/2;
   const camY=H/2-(pl.fx+pl.fy)*TH/2;
   
@@ -153,7 +359,6 @@ c.addEventListener('touchstart',e=>{
   if(gx<0||gx>=WORLD_W||gy<0||gy>=WORLD_H)return;
   if(world[gy][gx]!==0)return;
   
-  // Pathfinding BFS
   const open=[{x:pl.gx,y:pl.gy,p:[]}];
   const vis=new Set();
   vis.add(pl.gx+','+pl.gy);
