@@ -1,5 +1,5 @@
 // ============================================================================
-// JUGADOR - Movimiento, Pathfinding, Stats
+// JUGADOR - Movimiento preciso, Pathfinding, Stats
 // ============================================================================
 
 const pl = {
@@ -12,13 +12,13 @@ const pl = {
   temp: 100, maxTemp: 100,
   nivel: 1, xp: 0,
   oro: 50,
-  biomaActual: 0
+  biomaActual: 0,
+  tapTargetX: 0, tapTargetY: 0
 };
 
 function aplicarDificultad(dt) {
   const bioma = BIOMAS[pl.biomaActual];
   if (!bioma.dificultad) return;
-  
   switch(bioma.dificultad) {
     case 'sed':
       pl.sed = Math.max(0, pl.sed - dt * 2);
@@ -40,25 +40,15 @@ function aplicarDificultad(dt) {
 
 function findPath(sx, sy, gx, gy) {
   if (!esCaminable(gx, gy)) return [];
-  
   const open = [{x: sx, y: sy, p: []}];
   const vis = new Set();
   vis.add(sx + ',' + sy);
-  
   while (open.length) {
     const c = open.shift();
     if (c.x === gx && c.y === gy) return c.p;
-    
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
       const nx = c.x + dx, ny = c.y + dy, k = nx + ',' + ny;
       if (vis.has(k) || !esCaminable(nx, ny)) continue;
-      
-      // No atravesar esquinas en diagonales
-      if (dx !== 0 && dy !== 0) {
-        if (!esCaminable(c.x + dx, c.y)) continue;
-        if (!esCaminable(c.x, c.y + dy)) continue;
-      }
-      
       vis.add(k);
       open.push({x: nx, y: ny, p: [...c.p, {x: nx, y: ny}]});
     }
@@ -68,12 +58,11 @@ function findPath(sx, sy, gx, gy) {
 
 function moverJugador(dt) {
   if (pl.path.length === 0) return;
-  
   const t = pl.path[0];
   const speed = 3.3 * dt;
-  const dx = t.x - pl.fx, dy = t.y - pl.fy;
+  const dx = t.x - pl.fx;
+  const dy = t.y - pl.fy;
   const dist = Math.sqrt(dx*dx + dy*dy);
-  
   if (dist < speed || dist < 0.005) {
     pl.fx = t.x; pl.fy = t.y; pl.gx = t.x; pl.gy = t.y;
     pl.path.shift();
@@ -82,7 +71,6 @@ function moverJugador(dt) {
     pl.fx += (dx/dist) * speed;
     pl.fy += (dy/dist) * speed;
   }
-  
   pl.ft += dt;
   if (pl.ft > 0.15) { pl.ft = 0; pl.frame = (pl.frame + 1) % 2; }
 }

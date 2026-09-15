@@ -1,5 +1,5 @@
 // ============================================================================
-// UI - HUD, Minimapa fijo (siempre al Norte), Mensajes
+// UI - HUD, Minimapa AJUSTADO (más grande, esquina inferior derecha), Mensajes
 // ============================================================================
 
 let mensaje = {titulo: '', texto: '', t: 0};
@@ -66,9 +66,9 @@ function renderUI() {
   ctx.fillText('Bioma: ' + bioma.nombre, 18, H - 45);
   ctx.fillText('Pos: ' + Math.floor(pl.gx) + ',' + Math.floor(pl.gy), 18, H - 30);
   
-  // === MINIMAPA (fijo, sin rotación, Norte siempre arriba) ===
-  const mmW = 100, mmH = 100;
-  const mmX = W - mmW - 10, mmY = H - mmH - 10;
+  // === MINIMAPA MÁS GRANDE ===
+  const mmW = 140, mmH = 140;
+  const mmX = W - mmW - 15, mmY = H - mmH - 15;
   const mmCX = mmX + mmW / 2;
   const mmCY = mmY + mmH / 2;
   
@@ -89,11 +89,11 @@ function renderUI() {
       
       const b = BIOMAS[getBioma(x, y)];
       ctx.fillStyle = b.color1;
-      ctx.fillRect(mx - 1, my - 1, 2, 2);
+      ctx.fillRect(mx - 1, my - 1, 3, 3);
     }
   }
   
-  // NPCs en minimapa (solo en visión)
+  // NPCs en minimapa
   ctx.fillStyle = '#0ff';
   for (const n of npcs) {
     const nmx = mmX + (n.x / WORLD_W) * mmW;
@@ -102,13 +102,13 @@ function renderUI() {
     const ndy = nmy - mmCY;
     const ndist = Math.sqrt(ndx*ndx + ndy*ndy);
     if (ndist <= mmW / 2 - 2) {
-      ctx.fillRect(nmx - 1, nmy - 1, 2, 2);
+      ctx.fillRect(nmx - 1, nmy - 1, 3, 3);
     }
   }
   
   // Fog of War circular
   const fogRadius = mmW / 2 - 2;
-  const fogInner = fogRadius - 6;
+  const fogInner = fogRadius - 8;
   
   const gradient = ctx.createRadialGradient(mmCX, mmCY, fogInner, mmCX, mmCY, fogRadius + 4);
   gradient.addColorStop(0, 'rgba(0,0,0,0)');
@@ -119,9 +119,11 @@ function renderUI() {
   ctx.arc(mmCX, mmCY, fogRadius + 4, 0, Math.PI * 2);
   ctx.fill();
   
-  // Jugador en minimapa (centro)
+  // Jugador en minimapa
   ctx.fillStyle = '#ff0';
-  ctx.fillRect(mmCX - 3, mmCY - 3, 6, 6);
+  ctx.fillRect(mmCX - 4, mmCY - 4, 8, 8);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(mmCX - 2, mmCY - 2, 4, 4);
   
   // Borde del minimapa
   ctx.strokeStyle = '#ffd700';
@@ -130,9 +132,9 @@ function renderUI() {
   
   // Leyenda
   ctx.fillStyle = '#fff';
-  ctx.font = '8px monospace';
+  ctx.font = '9px monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('Mapa', mmX + 2, mmY - 5);
+  ctx.fillText('Mapa', mmX + 3, mmY - 6);
   
   // Mensaje flotante
   if (mensaje.t > 0) {

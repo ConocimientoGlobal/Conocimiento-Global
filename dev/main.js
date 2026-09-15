@@ -1,5 +1,5 @@
 // ============================================================================
-// MAIN - Game Loop, Input y Bootstrap
+// MAIN - Game Loop, Input con tap preciso, Bootstrap
 // ============================================================================
 
 const c = document.getElementById('c');
@@ -16,7 +16,7 @@ function main() {
   window.addEventListener('beforeunload', guardar);
   cargar();
   
-  // Input
+  // Input con tap preciso
   c.addEventListener('touchstart', e => {
     e.preventDefault();
     if (pl.path.length > 0) return;
@@ -24,9 +24,10 @@ function main() {
     const t = e.changedTouches[0];
     const cell = screenToCell(t.clientX, t.clientY);
     
+    // Verificar límites
     if (cell.x < 0 || cell.x >= WORLD_W || cell.y < 0 || cell.y >= WORLD_H) return;
     
-    // NPC
+    // Verificar NPC primero
     for (const n of npcs) {
       if (n.x === cell.x && n.y === cell.y) {
         mostrarMensaje('NPC: ' + n.nombre, 'Hola, viajero.');
@@ -34,7 +35,7 @@ function main() {
       }
     }
     
-    // Cofre
+    // Verificar cofre
     for (const co of cofres) {
       if (co.x === cell.x && co.y === cell.y && !co.abierto) {
         co.abierto = true;
@@ -45,8 +46,20 @@ function main() {
       }
     }
     
+    // Verificar que la celda sea caminable
     if (world[cell.y][cell.x] !== 0) return;
+    for (const n of npcs) {
+      if (n.x === cell.x && n.y === cell.y) return;
+    }
+    for (const co of cofres) {
+      if (co.x === cell.x && co.y === cell.y && !co.abierto) return;
+    }
     
+    // Guardar destino exacto del tap
+    pl.tapTargetX = cell.x;
+    pl.tapTargetY = cell.y;
+    
+    // Calcular camino
     pl.path = findPath(pl.gx, pl.gy, cell.x, cell.y);
   }, {passive: false});
   
