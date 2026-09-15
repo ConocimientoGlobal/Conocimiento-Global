@@ -219,7 +219,7 @@ function loop(){
       const bio=BIOMAS[biomaId]||BIOMAS[0];
       
       if(tipo<10){
-        const treeType=biomaId===1&&v%3===0?'pino':biomeId===2?'palmera':biomaId===4&&v%2===0?'muerto':'roble';
+        const treeType=bio.id===1&&v%3===0?'pino':bio.id===2?'palmera':bio.id===4&&v%2===0?'muerto':'roble';
         
         ctx.fillStyle='rgba(0,0,0,0.22)';
         ctx.beginPath();
