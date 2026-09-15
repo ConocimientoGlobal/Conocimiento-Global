@@ -71,6 +71,8 @@ function main() {
     
     if (mensaje.t > 0) mensaje.t -= dt;
     
+    incrementarFrame();
+    
     pl.biomaActual = getBioma(Math.floor(pl.gx), Math.floor(pl.gy));
     aplicarDificultad(dt);
     moverJugador(dt);

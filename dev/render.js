@@ -1,5 +1,5 @@
 // ============================================================================
-// RENDER - Personaje alineado, proporcionado y centrado
+// RENDER - Con texturas y efectos
 // ============================================================================
 
 let ctx;
@@ -44,22 +44,16 @@ function shadeColor(color, percent) {
   return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
 }
 
-// === PERSONAJE PROPORCIONADO Y CENTRADO EN EL TILE ===
 function drawPlayer(px, py, bo) {
-  // px, py = centro del tile (centro del diamante isométrico)
-  
-  // Sombra en el suelo (centrada)
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(px, py + TH/2, 8, 4, 0, 0, Math.PI * 2);
   ctx.fill();
   
-  // Piernas (más delgadas, pies juntos)
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(px - 3, py + TH/2 - 8, 2, 9 + bo);
   ctx.fillRect(px + 1, py + TH/2 - 8, 2, 9 + bo);
   
-  // Cuerpo (más delgado y alto)
   const bodyGrad = ctx.createLinearGradient(px - 6, py + TH/2 - 20, px + 6, py + TH/2 - 4);
   bodyGrad.addColorStop(0, '#1565c0');
   bodyGrad.addColorStop(0.5, '#1976d2');
@@ -67,22 +61,18 @@ function drawPlayer(px, py, bo) {
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(px - 7, py + TH/2 - 22, 14, 16);
   
-  // Cinturón
   ctx.fillStyle = '#ffc107';
   ctx.fillRect(px - 7, py + TH/2 - 8, 14, 2);
   
-  // Cabeza (centrada)
   const headGrad = ctx.createRadialGradient(px - 1, py + TH/2 - 28, 1, px, py + TH/2 - 26, 6);
   headGrad.addColorStop(0, '#fff3e0');
   headGrad.addColorStop(1, '#ffe0b2');
   ctx.fillStyle = headGrad;
   ctx.fillRect(px - 4, py + TH/2 - 32, 8, 7);
   
-  // Pelo
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(px - 5, py + TH/2 - 34, 10, 4);
   
-  // Ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(px - 2, py + TH/2 - 29, 2, 2);
   ctx.fillRect(px + 1, py + TH/2 - 29, 2, 2);
@@ -91,20 +81,16 @@ function drawPlayer(px, py, bo) {
   ctx.fillRect(px + 2, py + TH/2 - 28, 1, 1);
 }
 
-// === NPCs PROPORCIONADOS ===
 function drawNPC(px, py, npc) {
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(px, py + TH/2, 7, 3, 0, 0, Math.PI * 2);
   ctx.fill();
   
-  // Piernas
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(px - 3, py + TH/2 - 7, 2, 8);
   ctx.fillRect(px + 1, py + TH/2 - 7, 2, 8);
   
-  // Cuerpo
   const bodyGrad = ctx.createLinearGradient(px - 6, py + TH/2 - 18, px + 6, py + TH/2 - 2);
   bodyGrad.addColorStop(0, npc.color);
   bodyGrad.addColorStop(0.5, shadeColor(npc.color, 15));
@@ -112,15 +98,12 @@ function drawNPC(px, py, npc) {
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(px - 6, py + TH/2 - 20, 12, 14);
   
-  // Cabeza
   ctx.fillStyle = '#ffe0b2';
   ctx.fillRect(px - 3, py + TH/2 - 26, 7, 6);
   
-  // Pelo
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(px - 4, py + TH/2 - 28, 8, 3);
   
-  // Ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(px - 2, py + TH/2 - 24, 2, 2);
   ctx.fillRect(px + 1, py + TH/2 - 24, 2, 2);
@@ -128,19 +111,16 @@ function drawNPC(px, py, npc) {
   ctx.fillRect(px - 1, py + TH/2 - 23, 1, 1);
   ctx.fillRect(px + 2, py + TH/2 - 23, 1, 1);
   
-  // Indicador dorado
   ctx.fillStyle = '#ffd700';
   ctx.beginPath();
   ctx.arc(px, py + TH/2 - 34, 2, 0, Math.PI * 2);
   ctx.fill();
 }
 
-// === ÁRBOLES CON SOMBRA ===
 function drawArbol(px, py, tipo) {
-  // Sombra proyectada
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.beginPath();
-  ctx.ellipse(px + 6, py + TH/2, 14, 5, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(px + 4, py + TH/2, 10, 4, 0.3, 0, Math.PI * 2);
   ctx.fill();
   
   switch(tipo) {
@@ -184,7 +164,7 @@ function drawArbol(px, py, tipo) {
       ctx.arc(px, py - 22, 10, 0, Math.PI * 2);
       ctx.fill();
       break;
-    default: // roble
+    default:
       ctx.fillStyle = '#5d4037';
       ctx.fillRect(px - 3, py - 10, 5, 14);
       const roble = ctx.createRadialGradient(px, py - 22, 3, px, py - 20, 12);
@@ -195,19 +175,14 @@ function drawArbol(px, py, tipo) {
       ctx.beginPath();
       ctx.arc(px, py - 22, 12, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      ctx.arc(px - 3, py - 25, 4, 0, Math.PI * 2);
-      ctx.fill();
       break;
   }
 }
 
-// === ROCA CON SOMBRA ===
 function drawRoca(px, py) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 4, py + TH/2, 10, 4, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#757575';
@@ -230,11 +205,10 @@ function drawRoca(px, py) {
   ctx.fill();
 }
 
-// === CASA CON SOMBRA ===
 function drawCasa(px, py) {
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 8, py + TH/2 + 2, 16, 7, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(px + 6, py + TH/2, 14, 5, 0.3, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#e8d8b0';
@@ -263,11 +237,10 @@ function drawCasa(px, py) {
   ctx.fillRect(px + 4, py - 12, 4, 4);
 }
 
-// === FUENTE ===
 function drawFuente(px, py) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 3, py + TH/2, 10, 4, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#9e9e9e';
@@ -276,7 +249,6 @@ function drawFuente(px, py) {
   ctx.fillRect(px - 6, py - 4, 12, 3);
 }
 
-// === FLOR, HONGO, ARBUSTO ===
 function drawFlor(px, py, color) {
   ctx.fillStyle = '#4caf50';
   ctx.fillRect(px - 1, py + TH/2 - 4, 2, 4);
@@ -306,13 +278,8 @@ function drawArbusto(px, py, color) {
   ctx.beginPath();
   ctx.arc(px + 3, py + TH/2 - 2, 3, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.beginPath();
-  ctx.arc(px - 1, py + TH/2 - 5, 2, 0, Math.PI * 2);
-  ctx.fill();
 }
 
-// === RENDER PRINCIPAL ===
 function renderMundo() {
   const cam = getCamera();
   
@@ -331,7 +298,7 @@ function renderMundo() {
     }
   }
   
-  // Tiles con profundidad
+  // Tiles
   for (let y = Math.max(0, pgy - VISION_RADIO - 2); y < Math.min(WORLD_H, pgy + VISION_RADIO + 2); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO - 2); x < Math.min(WORLD_W, pgx + VISION_RADIO + 2); x++) {
       const s = iso(x, y);
@@ -356,9 +323,7 @@ function renderMundo() {
       ctx.globalAlpha = alpha;
       
       if (tile === 1) {
-        drawDiamond(sx, sy, TW, TH, '#1565c0', '#4fc3f7');
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(sx - 6, sy + TH/2, 4, 2);
+        drawAguaAnimada(sx, sy, TW, TH, x, y);
       } else {
         drawTileConProfundidad(sx, sy, TW, TH, bioma.color1, bioma.color2, x, y);
       }
@@ -372,7 +337,7 @@ function renderMundo() {
     }
   }
   
-  // Decoraciones (centradas en px, py)
+  // Decoraciones
   for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
       const dx = x - pgx;
@@ -404,6 +369,7 @@ function renderMundo() {
         drawRoca(px, py);
       } else if (tipo < 14 && biomaId === 0) {
         drawCasa(px, py);
+        drawHumo(px + 8, py - 28);
       } else if (tipo < 15 && biomaId === 0) {
         drawFuente(px, py);
       } else if (tipo < 17) {
@@ -424,7 +390,19 @@ function renderMundo() {
     }
   }
   
-  // Cofres (centrados)
+  // Niebla en pantano
+  if (getBioma(pgx, pgy) === 4) {
+    for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
+      for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
+        const s = iso(x, y);
+        const px = s.x + cam.x;
+        const py = s.y + cam.y;
+        drawNiebla(px, py, TW, TH, 0.5);
+      }
+    }
+  }
+  
+  // Cofres
   for (const co of cofres) {
     if (co.abierto) continue;
     const dx = co.x - pgx;
@@ -442,7 +420,7 @@ function renderMundo() {
     ctx.fillRect(px - 4, py - 2, 8, 2);
   }
   
-  // NPCs (centrados)
+  // NPCs
   for (const n of npcs) {
     const dx = n.x - pgx;
     const dy = n.y - pgy;
@@ -460,7 +438,7 @@ function renderMundo() {
     ctx.fillText(n.nombre, px, py - 12);
   }
   
-  // Jugador (centrado en el centro del diamante)
+  // Jugador
   const ps = iso(pl.fx, pl.fy);
   const px = ps.x + cam.x;
   const py = ps.y + cam.y;

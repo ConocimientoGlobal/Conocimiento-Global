@@ -351,9 +351,123 @@ function drawCaminoTierra(sx, sy, v) {
   ctx.fillRect(sx + TW/3 - 3, sy + TH/4 - 2, 2, 3);
 }
 
+// === dev/efectos.js ===
+// ============================================================================
+// EFECTOS - Agua animada, niebla, humo, reflejos
+// ============================================================================
+
+let frameCount = 0;
+
+// === AGUA ANIMADA CON REFLEJOS ===
+function drawAguaAnimada(sx, sy, w, h, x, y) {
+  const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+  const waveOffset = Math.sin((frameCount * 0.05) + (x + y) * 0.3) * 2;
+  
+  // Base del agua con gradiente
+  const waterGrad = ctx.createLinearGradient(sx - w/2, sy, sx + w/2, sy + h);
+  waterGrad.addColorStop(0, '#1565c0');
+  waterGrad.addColorStop(0.5, '#1976d2');
+  waterGrad.addColorStop(1, '#0d47a1');
+  ctx.fillStyle = waterGrad;
+  
+  ctx.beginPath();
+  ctx.moveTo(sx, sy + waveOffset);
+  ctx.lineTo(sx + w / 2, sy + h / 2 + waveOffset);
+  ctx.lineTo(sx, sy + h + waveOffset);
+  ctx.lineTo(sx - w / 2, sy + h / 2 + waveOffset);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Ondas/reflejos
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillRect(sx - 6 + waveOffset, sy + TH/3, 4, 1);
+  ctx.fillRect(sx + 2 + waveOffset * 0.5, sy + TH/2, 3, 1);
+  ctx.fillRect(sx - 4 + waveOffset * 0.7, sy + TH/4 + 2, 5, 1);
+  
+  // Brillos especulares
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(sx - 2 + waveOffset, sy + TH/3 + 1, 1, 1);
+  ctx.fillRect(sx + 5 + waveOffset * 0.8, sy + TH/2 - 1, 1, 1);
+  
+  // Borde de orilla (arena/tierra)
+  ctx.fillStyle = 'rgba(210,180,120,0.6)';
+  ctx.fillRect(sx - w/3, sy + h - 2, w*2/3, 2);
+}
+
+// === NIEBA BAJA CON PARTÍCULAS ===
+function drawNiebla(sx, sy, w, h, densidad) {
+  const v = ((sx * 374761393 + sy * 668265263) ^ 0x5bf03635) >>> 0;
+  const nieblaOffset = Math.sin((frameCount * 0.02) + sx * 0.01) * 3;
+  
+  // Capas de niebla
+  for (let i = 0; i < 3; i++) {
+    const alpha = 0.08 - i * 0.02;
+    ctx.fillStyle = `rgba(180,200,180,${alpha})`;
+    ctx.fillRect(sx - w/3, sy + TH/2 + i * 2 + nieblaOffset, w*2/3, 3);
+  }
+  
+  // Partículas flotantes
+  ctx.fillStyle = 'rgba(200,220,200,0.3)';
+  for (let i = 0; i < 3; i++) {
+    const px = sx - 8 + ((v + i * 7) % 16);
+    const py = sy + TH/4 + ((v + i * 11) % 6) + nieblaOffset;
+    ctx.fillRect(px, py, 1, 1);
+  }
+}
+
+// === HUMO ANIMADO DE CHIMENEA ===
+function drawHumo(sx, sy) {
+  const humoOffset = frameCount * 0.08;
+  
+  for (let i = 0; i < 4; i++) {
+    const hy = sy - i * 6 - (humoOffset % 8);
+    const hx = sx + Math.sin(humoOffset + i) * 2;
+    const alpha = 0.4 - i * 0.1;
+    const size = 2 + i;
+    
+    ctx.fillStyle = `rgba(180,180,180,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(hx, hy, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Luz cálida en la base
+  ctx.fillStyle = 'rgba(255,200,100,0.2)';
+  ctx.beginPath();
+  ctx.arc(sx, sy - 2, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === REFLEJO EN AGUA ===
+function drawReflejoAgua(sx, sy, objeto, x, y) {
+  const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+  const waveOffset = Math.sin((frameCount * 0.05) + (x + y) * 0.3) * 1;
+  
+  // Solo reflejar si hay agua cerca
+  let tieneAgua = false;
+  for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (nx >= 0 && nx < WORLD_W && ny >= 0 && ny < WORLD_H) {
+      if (world[ny][nx] === 1) tieneAgua = true;
+    }
+  }
+  
+  if (!tieneAgua) return;
+  
+  // Reflejo distorsionado
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(sx - 2 + waveOffset, sy + TH/2 + 2, 4, 2);
+}
+
+// === INCREMENTAR FRAME ===
+function incrementarFrame() {
+  frameCount++;
+}
+
 // === dev/render.js ===
 // ============================================================================
-// RENDER - Personaje alineado, proporcionado y centrado
+// RENDER - Con texturas y efectos
 // ============================================================================
 
 let ctx;
@@ -398,22 +512,16 @@ function shadeColor(color, percent) {
   return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
 }
 
-// === PERSONAJE PROPORCIONADO Y CENTRADO EN EL TILE ===
 function drawPlayer(px, py, bo) {
-  // px, py = centro del tile (centro del diamante isométrico)
-  
-  // Sombra en el suelo (centrada)
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(px, py + TH/2, 8, 4, 0, 0, Math.PI * 2);
   ctx.fill();
   
-  // Piernas (más delgadas, pies juntos)
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(px - 3, py + TH/2 - 8, 2, 9 + bo);
   ctx.fillRect(px + 1, py + TH/2 - 8, 2, 9 + bo);
   
-  // Cuerpo (más delgado y alto)
   const bodyGrad = ctx.createLinearGradient(px - 6, py + TH/2 - 20, px + 6, py + TH/2 - 4);
   bodyGrad.addColorStop(0, '#1565c0');
   bodyGrad.addColorStop(0.5, '#1976d2');
@@ -421,22 +529,18 @@ function drawPlayer(px, py, bo) {
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(px - 7, py + TH/2 - 22, 14, 16);
   
-  // Cinturón
   ctx.fillStyle = '#ffc107';
   ctx.fillRect(px - 7, py + TH/2 - 8, 14, 2);
   
-  // Cabeza (centrada)
   const headGrad = ctx.createRadialGradient(px - 1, py + TH/2 - 28, 1, px, py + TH/2 - 26, 6);
   headGrad.addColorStop(0, '#fff3e0');
   headGrad.addColorStop(1, '#ffe0b2');
   ctx.fillStyle = headGrad;
   ctx.fillRect(px - 4, py + TH/2 - 32, 8, 7);
   
-  // Pelo
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(px - 5, py + TH/2 - 34, 10, 4);
   
-  // Ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(px - 2, py + TH/2 - 29, 2, 2);
   ctx.fillRect(px + 1, py + TH/2 - 29, 2, 2);
@@ -445,20 +549,16 @@ function drawPlayer(px, py, bo) {
   ctx.fillRect(px + 2, py + TH/2 - 28, 1, 1);
 }
 
-// === NPCs PROPORCIONADOS ===
 function drawNPC(px, py, npc) {
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(px, py + TH/2, 7, 3, 0, 0, Math.PI * 2);
   ctx.fill();
   
-  // Piernas
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(px - 3, py + TH/2 - 7, 2, 8);
   ctx.fillRect(px + 1, py + TH/2 - 7, 2, 8);
   
-  // Cuerpo
   const bodyGrad = ctx.createLinearGradient(px - 6, py + TH/2 - 18, px + 6, py + TH/2 - 2);
   bodyGrad.addColorStop(0, npc.color);
   bodyGrad.addColorStop(0.5, shadeColor(npc.color, 15));
@@ -466,15 +566,12 @@ function drawNPC(px, py, npc) {
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(px - 6, py + TH/2 - 20, 12, 14);
   
-  // Cabeza
   ctx.fillStyle = '#ffe0b2';
   ctx.fillRect(px - 3, py + TH/2 - 26, 7, 6);
   
-  // Pelo
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(px - 4, py + TH/2 - 28, 8, 3);
   
-  // Ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(px - 2, py + TH/2 - 24, 2, 2);
   ctx.fillRect(px + 1, py + TH/2 - 24, 2, 2);
@@ -482,19 +579,16 @@ function drawNPC(px, py, npc) {
   ctx.fillRect(px - 1, py + TH/2 - 23, 1, 1);
   ctx.fillRect(px + 2, py + TH/2 - 23, 1, 1);
   
-  // Indicador dorado
   ctx.fillStyle = '#ffd700';
   ctx.beginPath();
   ctx.arc(px, py + TH/2 - 34, 2, 0, Math.PI * 2);
   ctx.fill();
 }
 
-// === ÁRBOLES CON SOMBRA ===
 function drawArbol(px, py, tipo) {
-  // Sombra proyectada
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.beginPath();
-  ctx.ellipse(px + 6, py + TH/2, 14, 5, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(px + 4, py + TH/2, 10, 4, 0.3, 0, Math.PI * 2);
   ctx.fill();
   
   switch(tipo) {
@@ -538,7 +632,7 @@ function drawArbol(px, py, tipo) {
       ctx.arc(px, py - 22, 10, 0, Math.PI * 2);
       ctx.fill();
       break;
-    default: // roble
+    default:
       ctx.fillStyle = '#5d4037';
       ctx.fillRect(px - 3, py - 10, 5, 14);
       const roble = ctx.createRadialGradient(px, py - 22, 3, px, py - 20, 12);
@@ -549,19 +643,14 @@ function drawArbol(px, py, tipo) {
       ctx.beginPath();
       ctx.arc(px, py - 22, 12, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      ctx.arc(px - 3, py - 25, 4, 0, Math.PI * 2);
-      ctx.fill();
       break;
   }
 }
 
-// === ROCA CON SOMBRA ===
 function drawRoca(px, py) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 4, py + TH/2, 10, 4, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#757575';
@@ -584,11 +673,10 @@ function drawRoca(px, py) {
   ctx.fill();
 }
 
-// === CASA CON SOMBRA ===
 function drawCasa(px, py) {
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 8, py + TH/2 + 2, 16, 7, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(px + 6, py + TH/2, 14, 5, 0.3, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#e8d8b0';
@@ -617,11 +705,10 @@ function drawCasa(px, py) {
   ctx.fillRect(px + 4, py - 12, 4, 4);
 }
 
-// === FUENTE ===
 function drawFuente(px, py) {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(px + 3, py + TH/2, 10, 4, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
   ctx.fill();
   
   ctx.fillStyle = '#9e9e9e';
@@ -630,7 +717,6 @@ function drawFuente(px, py) {
   ctx.fillRect(px - 6, py - 4, 12, 3);
 }
 
-// === FLOR, HONGO, ARBUSTO ===
 function drawFlor(px, py, color) {
   ctx.fillStyle = '#4caf50';
   ctx.fillRect(px - 1, py + TH/2 - 4, 2, 4);
@@ -660,13 +746,8 @@ function drawArbusto(px, py, color) {
   ctx.beginPath();
   ctx.arc(px + 3, py + TH/2 - 2, 3, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.beginPath();
-  ctx.arc(px - 1, py + TH/2 - 5, 2, 0, Math.PI * 2);
-  ctx.fill();
 }
 
-// === RENDER PRINCIPAL ===
 function renderMundo() {
   const cam = getCamera();
   
@@ -685,7 +766,7 @@ function renderMundo() {
     }
   }
   
-  // Tiles con profundidad
+  // Tiles
   for (let y = Math.max(0, pgy - VISION_RADIO - 2); y < Math.min(WORLD_H, pgy + VISION_RADIO + 2); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO - 2); x < Math.min(WORLD_W, pgx + VISION_RADIO + 2); x++) {
       const s = iso(x, y);
@@ -710,9 +791,7 @@ function renderMundo() {
       ctx.globalAlpha = alpha;
       
       if (tile === 1) {
-        drawDiamond(sx, sy, TW, TH, '#1565c0', '#4fc3f7');
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(sx - 6, sy + TH/2, 4, 2);
+        drawAguaAnimada(sx, sy, TW, TH, x, y);
       } else {
         drawTileConProfundidad(sx, sy, TW, TH, bioma.color1, bioma.color2, x, y);
       }
@@ -726,7 +805,7 @@ function renderMundo() {
     }
   }
   
-  // Decoraciones (centradas en px, py)
+  // Decoraciones
   for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
       const dx = x - pgx;
@@ -758,6 +837,7 @@ function renderMundo() {
         drawRoca(px, py);
       } else if (tipo < 14 && biomaId === 0) {
         drawCasa(px, py);
+        drawHumo(px + 8, py - 28);
       } else if (tipo < 15 && biomaId === 0) {
         drawFuente(px, py);
       } else if (tipo < 17) {
@@ -778,7 +858,19 @@ function renderMundo() {
     }
   }
   
-  // Cofres (centrados)
+  // Niebla en pantano
+  if (getBioma(pgx, pgy) === 4) {
+    for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
+      for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
+        const s = iso(x, y);
+        const px = s.x + cam.x;
+        const py = s.y + cam.y;
+        drawNiebla(px, py, TW, TH, 0.5);
+      }
+    }
+  }
+  
+  // Cofres
   for (const co of cofres) {
     if (co.abierto) continue;
     const dx = co.x - pgx;
@@ -796,7 +888,7 @@ function renderMundo() {
     ctx.fillRect(px - 4, py - 2, 8, 2);
   }
   
-  // NPCs (centrados)
+  // NPCs
   for (const n of npcs) {
     const dx = n.x - pgx;
     const dy = n.y - pgy;
@@ -814,7 +906,7 @@ function renderMundo() {
     ctx.fillText(n.nombre, px, py - 12);
   }
   
-  // Jugador (centrado en el centro del diamante)
+  // Jugador
   const ps = iso(pl.fx, pl.fy);
   const px = ps.x + cam.x;
   const py = ps.y + cam.y;
@@ -1163,6 +1255,8 @@ function main() {
     last = ts;
     
     if (mensaje.t > 0) mensaje.t -= dt;
+    
+    incrementarFrame();
     
     pl.biomaActual = getBioma(Math.floor(pl.gx), Math.floor(pl.gy));
     aplicarDificultad(dt);
