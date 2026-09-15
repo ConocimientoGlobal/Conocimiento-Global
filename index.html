@@ -1,114 +1,19 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PachaMirai</title>
-<style>*{margin:0;padding:0;box-sizing:border-box;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden;background:green}</style>
-</head>
-<body>
-<canvas id="c"></canvas>
+<html>
+<head><title>Test Verde</title></head>
+<body style="margin:0;padding:0;background:red;width:100%;height:100%">
+<div style="color:white;font-size:30px;padding:20px;background:blue;margin:20px">
+  HTML funciona
+</div>
+<canvas id="c" width="200" height="200" style="display:block;background:yellow;margin:20px"></canvas>
 <script>
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
-let W,H;
-function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
-resize();
-window.addEventListener('resize',resize);
-
-const MW=15,MH=15,TW=64,TH=32;
-const world=[];
-for(let y=0;y<MH;y++){world[y]=[];for(let x=0;x<MW;x++){const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;let t=0;if(v%12<2)t=1;world[y][x]=t;}}
-
-let px=7,py=7,path=[];
-let msg1='Toca cualquier celda',msg2='',msg3='';
-
-function iso(x,y){return{x:(x-y)*TW/2,y:(x+y)*TH/2};}
-
-function s2g(sx,sy){
-  const cam=iso(px,py);
-  const ox=W/2-cam.x,oy=H/2-cam.y;
-  const wx=sx-ox,wy=sy-oy;
-  return {x:Math.floor((wx/(TW/2)+wy/(TH/2))/2),y:Math.floor((wy/(TH/2)-wx/(TW/2))/2)};
-}
-
-function findPath(sx,sy,gx,gy){
-  if(gx<0||gx>=MW||gy<0||gy>=MH||world[gy][gx]===1)return[];
-  const open=[{x:sx,y:sy,path:[]}];const vis=new Set();
-  while(open.length){
-    const c=open.shift();
-    if(c.x===gx&&c.y===gy)return c.path;
-    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
-      const nx=c.x+dx,ny=c.y+dy,k=nx+','+ny;
-      if(nx<0||nx>=MW||ny<0||ny>=MH||vis.has(k)||world[ny][nx]===1)continue;
-      vis.add(k);open.push({x:nx,y:ny,path:[...c.path,{x:nx,y:ny}]});
-    }
-  }
-  return [];
-}
-
-c.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  const t=e.changedTouches[0];
-  const g=s2g(t.clientX,t.clientY);
-  msg1=`Tocado: ${g.x},${g.y}`;
-  path=findPath(Math.floor(px),Math.floor(py),g.x,g.y);
-  msg2=`Camino: ${path.length} celdas`;
-  msg3=path.length>0?'Moviendo...':'Sin camino (agua?)';
-},{passive:false});
-
-let last=performance.now();
-
-function loop(ts){
-  const dt=Math.min((ts-last)/1000,0.1);
-  last=ts;
-  
-  if(path.length>0){
-    const t=path[0];
-    const sp=8*dt;
-    if(px<t.x)px=Math.min(t.x,px+sp);else if(px>t.x)px=Math.max(t.x,px-sp);
-    if(py<t.y)py=Math.min(t.y,py+sp);else if(py>t.y)py=Math.max(t.y,py-sp);
-    if(Math.abs(px-t.x)<0.05&&Math.abs(py-t.y)<0.05){px=t.x;py=t.y;path.shift();}
-  }
-  
-  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
-  
-  const cam=iso(px,py);
-  const ox=W/2-cam.x,oy=H/2-cam.y;
-  
-  // Path
-  for(const p of path){
-    const s=iso(p.x,p.y),sx=s.x+ox,sy=s.y+oy;
-    ctx.fillStyle='rgba(255,255,0,0.4)';
-    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();ctx.fill();
-  }
-  
-  // Tiles
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
-    const s=iso(x,y),sx=s.x+ox,sy=s.y+oy;
-    if(sx<-TW||sx>W+TW||sy<-TH*2||sy>H+TH)continue;
-    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();
-    ctx.fillStyle=world[y][x]===1?'#1565c0':'#4caf50';ctx.fill();
-    ctx.strokeStyle=world[y][x]===1?'#0d47a1':'#388e3c';ctx.lineWidth=1;ctx.stroke();
-  }
-  
-  // Player
-  const p=iso(px,py),pxx=p.x+ox,pyy=p.y+oy;
-  ctx.fillStyle='#1976d2';ctx.fillRect(pxx-6,pyy-6,12,10);
-  ctx.fillStyle='#ffe0b2';ctx.fillRect(pxx-4,pyy-12,8,6);
-  ctx.fillStyle='#fff';ctx.fillRect(pxx-2,pyy-8,2,2);ctx.fillRect(pxx+1,pyy-8,2,2);
-  
-  // Debug
-  ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(5,5,300,70);
-  ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
-  ctx.fillText(msg1,10,20);
-  ctx.fillText(msg2,10,40);
-  ctx.fillText(msg3,10,60);
-  
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
+ctx.fillStyle='green';
+ctx.fillRect(50,50,100,100);
+ctx.fillStyle='white';
+ctx.font='16px monospace';
+ctx.fillText('Canvas OK',60,110);
 </script>
 </body>
 </html>
