@@ -1,17 +1,48 @@
 <!DOCTYPE html>
 <html>
-<head><title>Test</title></head>
-<body style="margin:0;padding:0;background:red;width:100%;height:100%">
-<div style="color:white;font-size:24px;padding:20px">Hola Mundo</div>
-<canvas id="c" width="300" height="300" style="display:block;background:yellow"></canvas>
+<head><title>PachaMirai</title>
+<style>*{margin:0;padding:0;background:#0a0a1a}html,body{width:100%;height:100%;overflow:hidden}canvas{display:block;position:fixed;top:0;left:0}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
 <script>
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
-ctx.fillStyle='green';
-ctx.fillRect(50,50,200,100);
-ctx.fillStyle='white';
-ctx.font='20px monospace';
-ctx.fillText('CANVAS OK',80,110);
+let W,H;
+function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+resize();
+window.addEventListener('resize',resize);
+
+function loop(){
+  ctx.fillStyle='#1a3a1a';ctx.fillRect(0,0,W,H);
+  
+  const px=W/2,py=H/2;
+  
+  // Sombra
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(px,py+16,10,4,0,0,Math.PI*2);ctx.fill();
+  
+  // Piernas
+  ctx.fillStyle='#5d4037';ctx.fillRect(px-4,py+2,3,8);ctx.fillRect(px+1,py+2,3,8);
+  
+  // Cuerpo
+  ctx.fillStyle='#1976d2';ctx.fillRect(px-6,py-6,12,10);
+  ctx.fillStyle='#1565c0';ctx.fillRect(px-6,py-6,12,3);
+  ctx.fillStyle='#ffc107';ctx.fillRect(px-6,py,12,2);
+  
+  // Cabeza
+  ctx.fillStyle='#ffe0b2';ctx.fillRect(px-4,py-12,8,6);
+  ctx.fillStyle='#3e2723';ctx.fillRect(px-4,py-14,8,2);
+  ctx.fillStyle='#fff';ctx.fillRect(px-2,py-8,2,2);ctx.fillRect(px+1,py-8,2,2);
+  
+  // Debug
+  ctx.fillStyle='#fff';ctx.font='14px monospace';ctx.textAlign='left';
+  ctx.fillText('W:'+W+' H:'+H,10,25);
+  ctx.fillText('Centro:'+px+','+py,10,45);
+  
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
