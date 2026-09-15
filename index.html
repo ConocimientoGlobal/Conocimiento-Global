@@ -209,13 +209,12 @@ function drawWater16(sx,sy,w,h,bio,x,y){
 
 // === ARBOL 16-BIT ===
 function drawTree16(sx,sy,tipo,v,bio){
+  const h=bio.id===3?TH*1.5:TH*1.2;
   // Sombra
   ctx.fillStyle='rgba(0,0,0,0.2)';
   ctx.beginPath();
   ctx.ellipse(sx+5,sy+h/2,12*0.8,5*0.8,0.3,0,Math.PI*2);
   ctx.fill();
-  
-  const h=bio.id===3?TH*1.5:TH*1.2;
   
   if(tipo==='pino'){
     // Tronco
