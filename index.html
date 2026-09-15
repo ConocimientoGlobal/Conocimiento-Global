@@ -25,7 +25,7 @@ window.addEventListener('resize',resize);
 
 const WORLD_W = 64;
 const WORLD_H = 64;
-const TILE = Math.min(W, H) / 20;
+const TILE = Math.min(W, H) / 16;
 const TW = TILE, TH = TILE / 2;
 
 // ============================================================================
@@ -315,7 +315,7 @@ function loop(ts){
   
   // Visibilidad: solo renderizar celdas visibles
   const camCell=screenToCell(W/2,H/2);
-  const viewDist=12;
+  const viewDist=10;
   
   for(let y=Math.max(0,camCell.y-viewDist);y<Math.min(WORLD_H,camCell.y+viewDist);y++){
     for(let x=Math.max(0,camCell.x-viewDist);x<Math.min(WORLD_W,camCell.x+viewDist);x++){
