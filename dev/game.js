@@ -13,25 +13,43 @@ function resize(){
 resize();
 window.addEventListener('resize',resize);
 
-// === PIXEL ART HELPER ===
-// Dibuja un "pixel" de 16-bit (cuadrado con sombra interna)
-function px(x,y,size,light,shadow){
-  ctx.fillStyle=light;
-  ctx.fillRect(x,y,size,size);
-  ctx.fillStyle=shadow;
-  ctx.fillRect(x,y+size-1,size,1);
-  ctx.fillRect(x+size-1,y,1,size);
-}
-
-// === BIOMAS ===
+// === PALETA CÁLCIDA CON CONTRASTE 16-BIT ===
 const BIOMAS=[
-  {id:0,n:'Pueblo',t:['#4caf50','#388e3c','#66bb6a','#2e7d32'],h:['#7cb342','#8bc34a','#689f38'],w:'#1565c0'},
-  {id:1,n:'Bosque',t:['#2e7d32','#1b5e20','#388e3c','#43a047'],h:['#7cb342','#689f38','#558b2f'],w:'#1565c0'},
-  {id:2,n:'Desierto',t:['#f9a825','#f57f17','#ffb300','#ffa000'],h:['#4caf50','#388e3c','#66bb6a'],w:'#0288d1'},
-  {id:3,n:'Montaña',t:['#9e9e9e','#757575','#bdbdbd','#616161'],h:['#689f38','#558b2f','#7cb342'],w:'#1565c0'},
-  {id:4,n:'Pantano',t:['#5d4037','#4e342e','#6d4c41','#3e2723'],h:['#5d4037','#4e342e','#795548'],w:'#0277bd'},
-  {id:5,n:'Volcan',t:['#d84315','#bf360c','#e64a19','#f4511e'],h:['#424242','#616161','#757575'],w:'#d84315'},
-  {id:6,n:'Castillo',t:['#37474f','#263238','#455a64','#546e7a'],h:['#4caf50','#388e3c','#66bb6a'],w:'#1565c0'}
+  {id:0,n:'Pueblo',
+    t:['#4caf50','#388e3c','#66bb6a','#2e7d32','#8bc34a'],
+    h:['#7cb342','#8bc34a','#689f38','#9ccc65'],
+    w:['#0288d1','#0277bd','#01579b'],
+    d:['#a1887f','#8d6e63','#6d4c41','#5d4037']},
+  {id:1,n:'Bosque',
+    t:['#2e7d32','#1b5e20','#388e3c','#43a047','#4caf50'],
+    h:['#7cb342','#689f38','#558b2f','#8bc34a'],
+    w:['#1565c0','#0d47a1','#1a237e'],
+    d:['#3e2723','#4e342e','#5d4037','#6d4c41']},
+  {id:2,n:'Desierto',
+    t:['#f9a825','#f57f17','#ffb300','#ffa000','#ff8f00'],
+    h:['#4caf50','#388e3c','#66bb6a','#2e7d32'],
+    w:['#0288d1','#0277bd','#01579b','#039be5'],
+    d:['#a1887f','#b8860b','#cd853f','#daa520']},
+  {id:3,n:'Montaña',
+    t:['#9e9e9e','#757575','#bdbdbd','#616161','#424242'],
+    h:['#689f38','#558b2f','#7cb342','#4caf50'],
+    w:['#1565c0','#0d47a1','#1a237e','#1976d2'],
+    d:['#757575','#616161','#424242','#37474f']},
+  {id:4,n:'Pantano',
+    t:['#5d4037','#4e342e','#6d4c41','#3e2723','#795548'],
+    h:['#5d4037','#4e342e','#795548','#6d4c41'],
+    w:['#0277bd','#01579b','#0288d1','#039be5'],
+    d:['#3e2723','#4e342e','#5d4037','#6d4c41']},
+  {id:5,n:'Volcan',
+    t:['#d84315','#bf360c','#e64a19','#f4511e','#ff5722'],
+    h:['#424242','#616161','#757575','#37474f'],
+    w:['#d84315','#bf360c','#e64a19','#f4511e'],
+    d:['#424242','#616161','#757575','#37474f']},
+  {id:6,n:'Castillo',
+    t:['#37474f','#263238','#455a64','#546e7a','#607d8b'],
+    h:['#4caf50','#388e3c','#66bb6a','#2e7d32'],
+    w:['#1565c0','#0d47a1','#1a237e','#1976d2'],
+    d:['#37474f','#263238','#455a64','#546e7a']}
 ];
 
 function getBioma(x,y){
@@ -57,6 +75,9 @@ const cofres=[{x:10,y:10,o:false},{x:25,y:18,o:false},{x:40,y:22,o:false}];
 
 // === JUGADOR ===
 const pl={gx:8,gy:8,fx:8,fy:8,path:[],frame:0,ft:0,hp:100,mhp:100,sed:100,temp:100,nivel:1,oro:50};
+
+// === PARALAJE ===
+let bgOffsetX=0, bgOffsetY=0;
 
 // === FUNCIONES ===
 function iso(x,y){return{x:(x-y)*TW/2,y:(x+y)*TH/2};}
@@ -111,13 +132,13 @@ function mover(dt){
 
 function drawTile16(sx,sy,w,h,bio,x,y){
   const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
-  const ps=Math.max(2,Math.floor(TW/16)); // tamaño del "pixel" 16-bit
+  const ps=Math.max(2,Math.floor(TW/16));
   
-  // Tile base con patrón de pixels
+  // Tile base con patrón de pixels cálido
   for(let py=0;py<h;py+=ps){
     for(let px=0;px<w;px+=ps){
-      const pxColor=((px+py+v)%3===0)?bio.t[0]:((px+py+v)%3===1)?bio.t[1]:bio.t[2];
-      ctx.fillStyle=pxColor;
+      const colorIdx=((px+py+v)%bio.t.length);
+      ctx.fillStyle=bio.t[colorIdx];
       ctx.fillRect(sx-ps+px,sy+py,ps,ps);
     }
   }
@@ -129,12 +150,12 @@ function drawTile16(sx,sy,w,h,bio,x,y){
   ctx.lineTo(sx,sy+h);
   ctx.lineTo(sx-w/2,sy+h/2);
   ctx.closePath();
-  ctx.strokeStyle='rgba(0,0,0,0.15)';
+  ctx.strokeStyle='rgba(0,0,0,0.12)';
   ctx.lineWidth=1;
   ctx.stroke();
   
   // Sombra inferior (volumen)
-  ctx.fillStyle='rgba(0,0,0,0.12)';
+  ctx.fillStyle='rgba(0,0,0,0.1)';
   ctx.beginPath();
   ctx.moveTo(sx,sy+h);
   ctx.lineTo(sx+w/2,sy+h/2);
@@ -145,7 +166,7 @@ function drawTile16(sx,sy,w,h,bio,x,y){
   ctx.fill();
   
   // Brillo superior
-  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.fillStyle='rgba(255,255,255,0.06)';
   ctx.beginPath();
   ctx.moveTo(sx,sy);
   ctx.lineTo(sx+w/2,sy+h/2);
@@ -163,8 +184,8 @@ function drawWater16(sx,sy,w,h,bio,x,y){
   // Base con variación de azul
   for(let py=0;py<h;py+=ps){
     for(let px=0;px<w;px+=ps){
-      const blue=120+((px+py+v)%40);
-      ctx.fillStyle=`rgb(20,${80+(v%30)},${blue})`;
+      const colorIdx=(px+py+v)%bio.w.length;
+      ctx.fillStyle=bio.w[colorIdx];
       ctx.fillRect(sx-ps+px,sy+py+wave,ps,ps);
     }
   }
@@ -176,15 +197,14 @@ function drawWater16(sx,sy,w,h,bio,x,y){
   ctx.lineTo(sx,sy+h);
   ctx.lineTo(sx-w/2,sy+h/2);
   ctx.closePath();
-  ctx.strokeStyle='rgba(100,180,220,0.3)';
+  ctx.strokeStyle='rgba(100,180,220,0.25)';
   ctx.lineWidth=1;
   ctx.stroke();
   
-  // Ondas (espuma)
-  ctx.fillStyle='rgba(200,230,255,0.4)';
+  // Ondas
+  ctx.fillStyle='rgba(200,230,255,0.35)';
   ctx.fillRect(sx-8+wave,sy+TH/3,5,1);
-  ctx.fillRect(sx+3+wave*0.7,sy+TH/2-1,4,1);
-  ctx.fillRect(sx-4+wave*0.5,sy/2+TH/4,3,1);
+  ctx.fillRect(sx+3+wave*0.7,sy/2+TH/4,4,1);
   
   // Peces
   if(v%7<2){
@@ -216,18 +236,22 @@ function drawArbol16(px,py,tipo,v){
   const ps=Math.max(2,Math.floor(TW/16));
   
   // Sombra
-  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.fillStyle='rgba(0,0,0,0.2)';
   ctx.beginPath();
   ctx.ellipse(px+6,py+TH/2,14*ps/2,6*ps/2,0.3,0,Math.PI*2);
   ctx.fill();
   
   if(tipo==='pino'){
-    // Tronco
+    // Tronco con textura de corteza
     ctx.fillStyle='#5d4037';
     ctx.fillRect(px-2*ps,py-12*ps,4*ps,14*ps);
     ctx.fillStyle='#4e342e';
     ctx.fillRect(px-2*ps,py-12*ps,2*ps,14*ps);
-    // Copa
+    // Líneas de corteza
+    ctx.fillStyle='#3e2723';
+    ctx.fillRect(px-1*ps,py-10*ps,1*ps,3*ps);
+    ctx.fillRect(px+1*ps,py-7*ps,1*ps,2*ps);
+    // Copa con hojas individuales
     ctx.fillStyle='#2e7d32';
     ctx.beginPath();
     ctx.moveTo(px,py-35*ps);
@@ -242,20 +266,30 @@ function drawArbol16(px,py,tipo,v){
     ctx.lineTo(px+8*ps,py-12*ps);
     ctx.closePath();
     ctx.fill();
-    // Nieve
-    if(v%3===0){
-      ctx.fillStyle='rgba(255,255,255,0.4)';
-      ctx.fillRect(px-3*ps,py-28*ps,6*ps,2*ps);
-    }
+    // Hojas individuales (puntitos)
+    ctx.fillStyle='#43a047';
+    ctx.fillRect(px-4*ps,py-20*ps,2*ps,2*ps);
+    ctx.fillRect(px+3*ps,py-18*ps,2*ps,2*ps);
+    ctx.fillRect(px-2*ps,py-16*ps,2*ps,2*ps);
+    // Sombra copa
+    ctx.fillStyle='rgba(0,0,0,0.12)';
+    ctx.beginPath();
+    ctx.moveTo(px+4*ps,py-30*ps);
+    ctx.lineTo(px+12*ps,py-10*ps);
+    ctx.lineTo(px+4*ps,py-10*ps);
+    ctx.closePath();
+    ctx.fill();
   } else if(tipo==='palmera'){
     ctx.fillStyle='#8d6e63';
     ctx.fillRect(px-3*ps,py-16*ps,6*ps,20*ps);
+    ctx.fillStyle='#6d4c41';
+    ctx.fillRect(px-3*ps,py-16*ps,3*ps,20*ps);
     ctx.fillStyle='#4caf50';
     ctx.fillRect(px-18*ps,py-24*ps,12*ps,3*ps);
     ctx.fillRect(px+6*ps,py-24*ps,12*ps,3*ps);
     ctx.fillRect(px-5*ps,py-32*ps,10*ps,3*ps);
   } else {
-    // Roble
+    // Roble con hojas individuales
     ctx.fillStyle='#5d4037';
     ctx.fillRect(px-3*ps,py-10*ps,6*ps,12*ps);
     ctx.fillStyle='#4e342e';
@@ -269,8 +303,14 @@ function drawArbol16(px,py,tipo,v){
     ctx.beginPath();
     ctx.arc(px,py-24*ps,12*ps,0,Math.PI*2);
     ctx.fill();
+    // Hojas individuales
+    ctx.fillStyle='#81c784';
+    ctx.fillRect(px-5*ps,py-28*ps,3*ps,3*ps);
+    ctx.fillRect(px+3*ps,py-26*ps,3*ps,3*ps);
+    ctx.fillRect(px-2*ps,py-22*ps,3*ps,3*ps);
+    ctx.fillRect(px+6*ps,py-24*ps,2*ps,2*ps);
     // Brillo
-    ctx.fillStyle='rgba(255,255,255,0.12)';
+    ctx.fillStyle='rgba(255,255,255,0.1)';
     ctx.beginPath();
     ctx.arc(px-3*ps,py-28*ps,4*ps,0,Math.PI*2);
     ctx.fill();
@@ -357,12 +397,16 @@ function loop(){
   frameCount++;
   const dt=1/60;
   
+  // Fondo con paralaje
+  const cam=getCam();
+  bgOffsetX+=(pl.fx*W/100-bgOffsetX)*0.02;
+  bgOffsetY+=(pl.fy*H/100-bgOffsetY)*0.02;
+  
   ctx.fillStyle='#0d1b0d';
   ctx.fillRect(0,0,W,H);
   
   mover(dt);
   
-  const cam=getCam();
   const pgx=Math.floor(pl.gx),pgy=Math.floor(pl.gy);
   const VR=10;
   
