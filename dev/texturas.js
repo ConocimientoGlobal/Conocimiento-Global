@@ -1,5 +1,5 @@
 // ============================================================================
-// TEXTURAS CON PROFUNDIDAD Y SOMBRAS
+// TEXTURAS CON VOLUMEN Y TEXTURA
 // ============================================================================
 
 function texturaHierba(sx, sy, biomaId, v) {
@@ -129,11 +129,11 @@ function texturaSuelo(sx, sy, v) {
   }
 }
 
-// === TILE CON PROFUNDIDAD Y SOMBRA ===
-function drawTileConProfundidad(sx, sy, w, h, color1, color2, x, y) {
+// === TILE CON VOLUMEN Y TEXTURA REALISTA ===
+function drawTileConVolumen(sx, sy, w, h, color1, color2, x, y) {
   const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
   
-  // Tile base
+  // Tile base con gradiente de volumen
   ctx.beginPath();
   ctx.moveTo(sx, sy);
   ctx.lineTo(sx + w / 2, sy + h / 2);
@@ -141,51 +141,104 @@ function drawTileConProfundidad(sx, sy, w, h, color1, color2, x, y) {
   ctx.lineTo(sx - w / 2, sy + h / 2);
   ctx.closePath();
   
-  // Gradiente de profundidad (luz desde arriba-izquierda)
+  // Gradiente principal de volumen (luz desde arriba-izquierda)
   const grad = ctx.createLinearGradient(sx - w/2, sy, sx + w/2, sy + h);
-  grad.addColorStop(0, color1);
-  grad.addColorStop(0.4, color2);
-  grad.addColorStop(0.7, shadeColor(color2, -15));
-  grad.addColorStop(1, shadeColor(color2, -25));
+  grad.addColorStop(0, shadeColor(color1, 15));
+  grad.addColorStop(0.3, color1);
+  grad.addColorStop(0.6, color2);
+  grad.addColorStop(1, shadeColor(color2, -30));
   ctx.fillStyle = grad;
   ctx.fill();
   
-  // Borde superior brillante (luz)
+  // Borde superior brillante (iluminación)
   ctx.beginPath();
   ctx.moveTo(sx, sy);
   ctx.lineTo(sx + w / 2, sy + h / 2);
   ctx.lineTo(sx, sy + h / 2);
   ctx.lineTo(sx - w / 2, sy + h / 2);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
   ctx.fill();
   
-  // Borde inferior sombreado
+  // Borde inferior sombreado (profundidad)
   ctx.beginPath();
   ctx.moveTo(sx, sy + h);
   ctx.lineTo(sx + w / 2, sy + h / 2);
   ctx.lineTo(sx, sy + h / 2);
   ctx.lineTo(sx - w / 2, sy + h / 2);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.fill();
   
-  // Sombra interna (simula relieve)
-  ctx.fillStyle = 'rgba(0,0,0,0.05)';
-  ctx.fillRect(sx - w/4, sy + h/4, w/2, h/2);
+  // Sombra lateral izquierda (volumen)
+  ctx.beginPath();
+  ctx.moveTo(sx - w/2, sy + h/2);
+  ctx.lineTo(sx, sy);
+  ctx.lineTo(sx, sy + h/2);
+  ctx.lineTo(sx - w/2, sy + h/2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.fill();
   
-  // Punto de luz aleatorio (simula reflexo)
-  if (v % 19 === 0) {
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(sx - 3 + (v % 6), sy + 2 + (v % 4), 2, 2);
+  // Sombra lateral derecha (volumen)
+  ctx.beginPath();
+  ctx.moveTo(sx + w/2, sy + h/2);
+  ctx.lineTo(sx, sy + h);
+  ctx.lineTo(sx, sy + h/2);
+  ctx.lineTo(sx + w/2, sy + h/2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fill();
+  
+  // Textura granular (puntos de ruido para simular tierra)
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  for (let i = 0; i < 5; i++) {
+    const nx = sx - w/3 + (v * (i+1) % w*2/3);
+    const ny = sy + h/4 + (v * (i+2) % h*3/4);
+    ctx.fillRect(nx, ny, 1, 1);
   }
   
-  // Textura de ruido (simula granularidad)
-  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  // Textura de grano fino
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
   for (let i = 0; i < 3; i++) {
-    const nx = sx - 8 + (v * (i+1) % 16);
-    const ny = sy + 2 + (v * (i+2) % 8);
+    const nx = sx - w/4 + (v * (i+3) % w/2);
+    const ny = sy + h/3 + (v * (i+4) % h/2);
     ctx.fillRect(nx, ny, 1, 1);
+  }
+  
+  // Pequeñas elevaciones (simula relieve del terreno)
+  if (v % 7 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(sx - 4 + (v % 8), sy + h/3, 3, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.06)';
+    ctx.fillRect(sx - 4 + (v % 8), sy + h/3 + 2, 3, 1);
+  }
+  
+  // Depresiones (simula hoyos)
+  if (v % 11 === 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(sx + 2 + (v % 6), sy + h/4, 4, 3);
+    ctx.fillStyle = 'rgba(0,0,0,0.06)';
+    ctx.fillRect(sx + 2 + (v % 6), sy + h/4, 4, 1);
+  }
+  
+  // Raíces/vegetación rastrera
+  if (v % 13 === 0) {
+    ctx.fillStyle = 'rgba(80,100,50,0.3)';
+    ctx.fillRect(sx - 6, sy + h/3 + 1, 2, 1);
+    ctx.fillRect(sx + 4, sy + h/4 + 1, 2, 1);
+  }
+  
+  // Insectos/pequeños detalles
+  if (v % 19 === 0) {
+    ctx.fillStyle = 'rgba(60,40,20,0.2)';
+    ctx.fillRect(sx + 5, sy + h/3, 1, 1);
+  }
+  
+  // Brillos de humedad
+  if (v % 23 === 0) {
+    ctx.fillStyle = 'rgba(150,200,255,0.15)';
+    ctx.fillRect(sx - 3, sy + h/4 + 1, 2, 1);
   }
 }
 
@@ -197,10 +250,6 @@ function drawTexturasBioma(sx, sy, x, y) {
 }
 
 function drawCaminoTierra(sx, sy, v) {
-  // Sombra del camino
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fillRect(sx - TW/3 + 2, sy + TH/4 + 2, TW*2/3, TH/3);
-  
   ctx.fillStyle = '#a1887f';
   ctx.fillRect(sx - TW/3, sy + TH/4, TW*2/3, TH/3);
   

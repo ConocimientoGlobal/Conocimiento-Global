@@ -325,7 +325,7 @@ function renderMundo() {
       if (tile === 1) {
         drawAguaAnimada(sx, sy, TW, TH, x, y);
       } else {
-        drawTileConProfundidad(sx, sy, TW, TH, bioma.color1, bioma.color2, x, y);
+        drawTileConVolumen(sx, sy, TW, TH, bioma.color1, bioma.color2, x, y);
       }
       
       if (inPath) {
