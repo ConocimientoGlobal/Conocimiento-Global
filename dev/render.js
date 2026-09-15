@@ -1,13 +1,11 @@
 // ============================================================================
-// RENDER - Con texturas y efectos
+// RENDER - Con mar, vegetación detallada y texturas pixel art
 // ============================================================================
 
 let ctx;
 let lastDir = {x: 0, y: 1};
 
-function iso(x, y) {
-  return {x: (x - y) * TW / 2, y: (x + y) * TH / 2};
-}
+function iso(x, y) { return {x: (x - y) * TW / 2, y: (x + y) * TH / 2}; }
 
 function getCamera() {
   const p = iso(pl.fx, pl.fy);
@@ -117,169 +115,6 @@ function drawNPC(px, py, npc) {
   ctx.fill();
 }
 
-function drawArbol(px, py, tipo) {
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath();
-  ctx.ellipse(px + 4, py + TH/2, 10, 4, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  
-  switch(tipo) {
-    case 'pino':
-      ctx.fillStyle = '#5d4037';
-      ctx.fillRect(px - 2, py - 12, 4, 14);
-      ctx.fillStyle = '#2e7d32';
-      ctx.beginPath();
-      ctx.moveTo(px, py - 35);
-      ctx.lineTo(px - 12, py - 8);
-      ctx.lineTo(px + 12, py - 8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#388e3c';
-      ctx.beginPath();
-      ctx.moveTo(px, py - 30);
-      ctx.lineTo(px - 8, py - 10);
-      ctx.lineTo(px + 8, py - 10);
-      ctx.closePath();
-      ctx.fill();
-      break;
-    case 'palmera':
-      ctx.fillStyle = '#8d6e63';
-      ctx.fillRect(px - 3, py - 14, 6, 18);
-      ctx.fillStyle = '#4caf50';
-      ctx.fillRect(px - 14, py - 20, 8, 3);
-      ctx.fillRect(px + 6, py - 20, 8, 3);
-      break;
-    case 'muerto':
-      ctx.fillStyle = '#4e342e';
-      ctx.fillRect(px - 1, py - 20, 3, 22);
-      break;
-    case 'abedul':
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillRect(px - 2, py - 12, 5, 16);
-      const abedul = ctx.createRadialGradient(px, py - 22, 3, px, py - 20, 10);
-      abedul.addColorStop(0, '#8bc34a');
-      abedul.addColorStop(1, '#388e3c');
-      ctx.fillStyle = abedul;
-      ctx.beginPath();
-      ctx.arc(px, py - 22, 10, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    default:
-      ctx.fillStyle = '#5d4037';
-      ctx.fillRect(px - 3, py - 10, 5, 14);
-      const roble = ctx.createRadialGradient(px, py - 22, 3, px, py - 20, 12);
-      roble.addColorStop(0, '#66bb6a');
-      roble.addColorStop(0.7, '#388e3c');
-      roble.addColorStop(1, '#1b5e20');
-      ctx.fillStyle = roble;
-      ctx.beginPath();
-      ctx.arc(px, py - 22, 12, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-  }
-}
-
-function drawRoca(px, py) {
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.fillStyle = '#757575';
-  ctx.beginPath();
-  ctx.moveTo(px - 8, py + TH/2);
-  ctx.lineTo(px - 5, py - 8);
-  ctx.lineTo(px + 3, py - 12);
-  ctx.lineTo(px + 8, py - 6);
-  ctx.lineTo(px + 8, py + TH/2);
-  ctx.closePath();
-  ctx.fill();
-  
-  ctx.fillStyle = '#616161';
-  ctx.beginPath();
-  ctx.moveTo(px + 3, py - 12);
-  ctx.lineTo(px + 8, py - 6);
-  ctx.lineTo(px + 8, py + TH/2);
-  ctx.lineTo(px + 3, py + TH/2);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawCasa(px, py) {
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(px + 6, py + TH/2, 14, 5, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.fillStyle = '#e8d8b0';
-  ctx.fillRect(px - 10, py - 14, 20, 16);
-  
-  ctx.fillStyle = '#c62828';
-  ctx.beginPath();
-  ctx.moveTo(px, py - 28);
-  ctx.lineTo(px - 14, py - 15);
-  ctx.lineTo(px + 14, py - 15);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath();
-  ctx.moveTo(px, py - 28);
-  ctx.lineTo(px + 14, py - 15);
-  ctx.lineTo(px + 14, py - 12);
-  ctx.closePath();
-  ctx.fill();
-  
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(px - 3, py - 6, 6, 8);
-  
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fillRect(px - 8, py - 12, 4, 4);
-  ctx.fillRect(px + 4, py - 12, 4, 4);
-}
-
-function drawFuente(px, py) {
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.beginPath();
-  ctx.ellipse(px + 3, py + TH/2, 8, 3, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.fillStyle = '#9e9e9e';
-  ctx.fillRect(px - 8, py - 6, 16, 8);
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fillRect(px - 6, py - 4, 12, 3);
-}
-
-function drawFlor(px, py, color) {
-  ctx.fillStyle = '#4caf50';
-  ctx.fillRect(px - 1, py + TH/2 - 4, 2, 4);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(px, py + TH/2 - 6, 2, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawHongo(px, py, color) {
-  ctx.fillStyle = '#e0e0e0';
-  ctx.fillRect(px - 1, py + TH/2 - 3, 3, 3);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(px, py + TH/2 - 3, 3, Math.PI, 0);
-  ctx.fill();
-}
-
-function drawArbusto(px, py, color) {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(px, py + TH/2 - 3, 5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(px - 3, py + TH/2 - 2, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(px + 3, py + TH/2 - 2, 3, 0, Math.PI * 2);
-  ctx.fill();
-}
-
 function renderMundo() {
   const cam = getCamera();
   
@@ -323,7 +158,12 @@ function renderMundo() {
       ctx.globalAlpha = alpha;
       
       if (tile === 1) {
-        drawAguaAnimada(sx, sy, TW, TH, x, y);
+        const biomaId = getBioma(x, y);
+        if (biomaId === 2 || biomaId === 4 || biomaId === 5) {
+          drawMar(sx, sy, TW, TH, x, y);
+        } else {
+          drawAguaDulce(sx, sy, TW, TH, x, y);
+        }
       } else {
         drawTileConVolumen(sx, sy, TW, TH, bioma.color1, bioma.color2, x, y);
       }
@@ -337,7 +177,7 @@ function renderMundo() {
     }
   }
   
-  // Decoraciones
+  // Decoraciones con más detalle
   for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
       const dx = x - pgx;
@@ -364,14 +204,14 @@ function renderMundo() {
           case 5: tipoArbol = 'muerto'; break;
           default: tipoArbol = v % 2 === 0 ? 'roble' : 'abedul'; break;
         }
-        drawArbol(px, py, tipoArbol);
+        drawArbolAlto(px, py, tipoArbol);
       } else if (tipo < 12) {
-        drawRoca(px, py);
+        drawRocaGrande(px, py);
       } else if (tipo < 14 && biomaId === 0) {
-        drawCasa(px, py);
-        drawHumo(px + 8, py - 28);
+        drawCasaGrande(px, py);
+        drawHumo(px + 10, py - 38);
       } else if (tipo < 15 && biomaId === 0) {
-        drawFuente(px, py);
+        drawFuenteGrande(px, py);
       } else if (tipo < 17) {
         let colorFlor = '#fff';
         switch(biomaId) {
@@ -380,12 +220,12 @@ function renderMundo() {
           case 2: colorFlor = '#ff9800'; break;
           default: colorFlor = '#fff'; break;
         }
-        drawFlor(px, py, colorFlor);
+        drawFlorSilvestre(px, py, colorFlor);
       } else if (tipo < 19) {
         const colorHongo = v % 2 === 0 ? '#8d6e63' : (v % 3 === 0 ? '#4caf50' : '#2196f3');
-        drawHongo(px, py, colorHongo);
+        drawHongoColorido(px, py, colorHongo);
       } else if (tipo < 22) {
-        drawArbusto(px, py, v % 2 === 0 ? '#388e3c' : '#2e7d32');
+        drawArbustoGrande(px, py, v % 2 === 0 ? '#388e3c' : '#2e7d32');
       }
     }
   }
