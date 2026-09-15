@@ -4,16 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PachaMirai</title>
-<style>*{margin:0;padding:0;background:#000;box-sizing:border-box;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden}canvas{display:block;position:fixed;top:0;left:0}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden;background:#000}canvas{display:block}</style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script>
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
-
 let W,H;
-function resize(){c.width=W=window.innerWidth;c.height=H=window.innerHeight;}
+function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
 resize();
 window.addEventListener('resize',resize);
 
@@ -43,24 +42,21 @@ function findPath(sx,sy,gx,gy){
     for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){
       const nx=c.x+dx,ny=c.y+dy,k=nx+','+ny;
       if(nx<0||nx>=MW||ny<0||ny>=MH||vis.has(k)||world[ny][nx]===1)continue;
-      for(const e of en)if(e.x===nx&&e.y===ny&&e.hp>0)continue;
+      let blocked=false;for(const e of en)if(e.x===nx&&e.y===ny&&e.hp>0){blocked=true;break;}
+      if(blocked)continue;
       vis.add(k);open.push({x:nx,y:ny,path:[...c.path,{x:nx,y:ny}]});
     }
   }
   return [];
 }
 
-let jx=0,jy=0,ja=false,jsx=0,jsy=0;
-
+// Tap en pantalla = mover a esa celda
 c.addEventListener('touchstart',e=>{
   e.preventDefault();
   const t=e.changedTouches[0];
-  if(t.clientX<W*0.5){ja=true;jsx=t.clientX;jsy=t.clientY;jx=0;jy=0;}
-  else{const g=s2g(t.clientX,t.clientY);pl.path=findPath(Math.floor(pl.gx),Math.floor(pl.gy),g.x,g.y);}
+  const g=s2g(t.clientX,t.clientY);
+  pl.path=findPath(Math.floor(pl.gx),Math.floor(pl.gy),g.x,g.y);
 },{passive:false});
-
-c.addEventListener('touchmove',e=>{e.preventDefault();if(!ja)return;for(let i=0;i<e.changedTouches.length;i++){const t=e.changedTouches[i];const dx=t.clientX-jsx,dy=t.clientY-jsy;const d=Math.sqrt(dx*dx+dy*dy),m=30;if(d>m){jx=dx/d;jy=dy/d;}else{jx=dx/m;jy=dy/m;}}},{passive:false});
-c.addEventListener('touchend',e=>{ja=false;jx=0;jy=0;},{passive:false});
 
 let last=performance.now();
 
@@ -68,15 +64,9 @@ function loop(ts){
   const dt=Math.min((ts-last)/1000,0.1);
   last=ts;
   
-  if(ja&&(jx>0.5||jx<-0.5||jy>0.5||jy<-0.5)&&pl.path.length===0){
-    let dx=0,dy=0;
-    if(Math.abs(jx)>Math.abs(dy))dx=jx>0?1:-1;else dy=jy>0?1:-1;
-    const nx=pl.gx+dx,ny=pl.gy+dy;
-    if(nx>=0&&nx<MW&&ny>=0&&ny<MH&&world[ny][nx]===0)pl.path.push({x:nx,y:ny});
-  }
-  
+  // Avanzar por el camino (celda por celda)
   if(pl.path.length>0){
-    const t=pl.path[0];const sp=6*dt;
+    const t=pl.path[0];const sp=8*dt;
     if(pl.px<t.x)pl.px=Math.min(t.x,pl.px+sp);else if(pl.px>t.x)pl.px=Math.max(t.x,pl.px-sp);
     if(pl.py<t.y)pl.py=Math.min(t.y,pl.py+sp);else if(pl.py>t.y)pl.py=Math.max(t.y,pl.py-sp);
     if(Math.abs(pl.px-t.x)<0.05&&Math.abs(pl.py-t.y)<0.05){pl.gx=t.x;pl.gy=t.y;pl.path.shift();}
@@ -86,8 +76,10 @@ function loop(ts){
   ctx.fillStyle='#1a3a1a';ctx.fillRect(0,0,W,H);
   const cam=iso(pl.gx,pl.gy);const ox=W/2-cam.x,oy=H/2-cam.y;
   
-  for(const p of pl.path){const s=iso(p.x,p.y),sx=s.x+ox,sy=s.y+oy;ctx.fillStyle='rgba(255,255,0,0.35)';ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();ctx.fill();}
+  // Camino visual
+  for(const p of pl.path){const s=iso(p.x,p.y),sx=s.x+ox,sy=s.y+oy;ctx.fillStyle='rgba(255,255,0,0.4)';ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();ctx.fill();}
   
+  // Tiles
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
     const s=iso(x,y),sx=s.x+ox,sy=s.y+oy;
     if(sx<-TW||sx>W+TW||sy<-TH*2||sy>H+TH)continue;
@@ -97,15 +89,16 @@ function loop(ts){
     if(t===1){ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fillRect(sx-8,sy+10,6,1);}
   }
   
+  // Enemigos
   for(const e of en){
     if(e.hp<=0)continue;
     const s=iso(e.x,e.y),sx=s.x+ox,sy=s.y+oy;
-    if(sx<-50||sx>W+50||sy<-50||sy>H+50)continue;
     ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(sx,sy+12,8,3,0,0,Math.PI*2);ctx.fill();
     ctx.fillStyle=e.c;ctx.fillRect(sx-6,sy-4,12,14);ctx.fillStyle='#fff';ctx.fillRect(sx-4,sy-2,3,3);ctx.fillRect(sx+1,sy-2,3,3);
     ctx.fillStyle='#333';ctx.fillRect(sx-10,sy-12,20,3);ctx.fillStyle='#e44';ctx.fillRect(sx-9,sy-11,18*e.hp/e.mhp,1);
   }
   
+  // Jugador
   const p=iso(pl.px,pl.py),px=p.x+ox,py=p.y-10,bo=pl.frame===0?0:1;
   ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.ellipse(px,py+16,10,4,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#5d4037';ctx.fillRect(px-4,py+2,3,7+bo);ctx.fillRect(px+1,py+2,3,7+bo);
@@ -113,12 +106,11 @@ function loop(ts){
   ctx.fillStyle='#ffe0b2';ctx.fillRect(px-4,py-12,8,6);ctx.fillStyle='#3e2723';ctx.fillRect(px-4,py-14,8,2);
   ctx.fillStyle='#fff';ctx.fillRect(px-2,py-8,2,2);ctx.fillRect(px+1,py-8,2,2);ctx.fillStyle='#000';ctx.fillRect(px-1,py-7,1,1);ctx.fillRect(px+2,py-7,1,1);
   
-  if(ja){ctx.fillStyle='rgba(255,255,255,0.12)';ctx.beginPath();ctx.arc(jsx,jsy,50,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(jsx+jx*35,jsy+jy*35,16,0,Math.PI*2);ctx.fill();}
-  
+  // UI
   ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(10,10,130,45);ctx.fillStyle='#fff';ctx.font='bold 13px monospace';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Lv.1 Hero',18,25);
   ctx.fillStyle='#4a0000';ctx.fillRect(18,32,110,8);ctx.fillStyle='#e44';ctx.fillRect(19,33,108,6);ctx.fillStyle='#fff';ctx.font='7px monospace';ctx.fillText('100/100',60,38);
   
-  ctx.fillStyle='#0f0';ctx.font='10px monospace';ctx.textAlign='left';ctx.fillText('Grid:'+pl.gx+','+pl.gy+' Path:'+pl.path.length,10,H-10);
+  ctx.fillStyle='#0f0';ctx.font='10px monospace';ctx.textAlign='left';ctx.fillText('Pos:'+pl.gx+','+pl.gy+' Path:'+pl.path.length+' W:'+W+' H:'+H,10,H-10);
   
   requestAnimationFrame(loop);
 }
