@@ -14,8 +14,6 @@ function main() {
   generarCofres();
   
   window.addEventListener('beforeunload', guardar);
-  
-  // Guardar estado del mapa al iniciar
   cargar();
   
   // Input
@@ -28,7 +26,7 @@ function main() {
     
     if (cell.x < 0 || cell.x >= WORLD_W || cell.y < 0 || cell.y >= WORLD_H) return;
     
-    // Verificar NPC
+    // NPC
     for (const n of npcs) {
       if (n.x === cell.x && n.y === cell.y) {
         mostrarMensaje('NPC: ' + n.nombre, 'Hola, viajero.');
@@ -36,7 +34,7 @@ function main() {
       }
     }
     
-    // Verificar cofre
+    // Cofre
     for (const co of cofres) {
       if (co.x === cell.x && co.y === cell.y && !co.abierto) {
         co.abierto = true;

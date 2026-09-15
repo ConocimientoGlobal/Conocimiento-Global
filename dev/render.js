@@ -1,9 +1,9 @@
 // ============================================================================
-// RENDER - Iluminación Waven-style, decoración, personajes detallados
+// RENDER - Iluminación Waven, Decoración Detallada, Personajes, Estructuras
 // ============================================================================
 
 let ctx;
-let lastDir = {x: 0, y: 1}; // Última dirección del jugador
+let lastDir = {x: 0, y: 1};
 
 function iso(x, y) {
   return {x: (x - y) * TW / 2, y: (x + y) * TH / 2};
@@ -35,56 +35,61 @@ function drawDiamond(sx, sy, w, h, fill, stroke) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
 
-// === PERSONAJE PRINCIPAL (con iluminación Waven-style) ===
+function shadeColor(color, percent) {
+  const num = parseInt(color.replace('#',''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+  const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+}
+
+// === PERSONAJE PRINCIPAL ===
 function drawPlayer(sx, sy, bo) {
-  // Sombra proyectada
+  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(sx, sy + TH/2 + 6, 16, 6, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Zapatos
-  ctx.fillStyle = '#3e2723';
-  ctx.fillRect(sx - 7, sy + TH/2, 6, 5);
-  ctx.fillRect(sx + 1, sy + TH/2, 6, 5);
+  // Botas
   ctx.fillStyle = '#5d4037';
-  ctx.fillRect(sx - 7, sy + TH/2 + 1, 6, 2);
-  ctx.fillRect(sx + 1, sy + TH/2 + 1, 6, 2);
+  ctx.fillRect(sx - 7, sy + TH/2 - 1, 6, 6);
+  ctx.fillRect(sx + 1, sy + TH/2 - 1, 6, 6);
+  ctx.fillStyle = '#ffc107';
+  ctx.fillRect(sx - 6, sy + TH/2, 2, 2);
+  ctx.fillRect(sx + 2, sy + TH/2, 2, 2);
   
   // Piernas
   ctx.fillStyle = '#6d4c41';
-  ctx.fillRect(sx - 6, sy + TH/2 - 8, 5, 9 + bo);
-  ctx.fillRect(sx + 1, sy + TH/2 - 8, 5, 9 + bo);
-  // Sombra interna piernas
+  ctx.fillRect(sx - 6, sy + TH/2 - 9, 5, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 9, 5, 9 + bo);
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillRect(sx - 6, sy + TH/2 - 8, 2, 9 + bo);
-  ctx.fillRect(sx + 1, sy + TH/2 - 8, 2, 9 + bo);
+  ctx.fillRect(sx - 6, sy + TH/2 - 9, 2, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 9, 2, 9 + bo);
   
-  // Cuerpo (armadura con gradiente)
+  // Cuerpo
   const bodyGrad = ctx.createLinearGradient(sx - 10, sy + TH/2 - 24, sx + 10, sy + TH/2);
   bodyGrad.addColorStop(0, '#1565c0');
   bodyGrad.addColorStop(0.5, '#1976d2');
   bodyGrad.addColorStop(1, '#0d47a1');
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(sx - 9, sy + TH/2 - 22, 18, 16);
-  // Sombra interna
   ctx.fillStyle = 'rgba(0,0,0,0.15)';
   ctx.fillRect(sx - 9, sy + TH/2 - 22, 4, 16);
   ctx.fillRect(sx + 5, sy + TH/2 - 22, 4, 16);
   
   // Hombreras
-  ctx.fillStyle = '#1565c0';
+  ctx.fillStyle = '#ffc107';
   ctx.fillRect(sx - 12, sy + TH/2 - 24, 5, 7);
   ctx.fillRect(sx + 7, sy + TH/2 - 24, 5, 7);
-  // Brillo hombreras
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.fillRect(sx - 11, sy + TH/2 - 23, 3, 2);
   ctx.fillRect(sx + 8, sy + TH/2 - 23, 3, 2);
   
   // Cinturón
   ctx.fillStyle = '#ffc107';
   ctx.fillRect(sx - 9, sy + TH/2 - 10, 18, 3);
-  // Hebulla con brillo
   ctx.fillStyle = '#ff8f00';
   ctx.fillRect(sx - 3, sy + TH/2 - 11, 6, 5);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
@@ -105,12 +110,11 @@ function drawPlayer(sx, sy, bo) {
   ctx.fillStyle = headGrad;
   ctx.fillRect(sx - 5, sy + TH/2 - 32, 10, 9);
   
-  // Pelo con brillos
+  // Pelo
   ctx.fillStyle = '#3e2723';
   ctx.fillRect(sx - 7, sy + TH/2 - 35, 14, 7);
   ctx.fillRect(sx - 7, sy + TH/2 - 35, 3, 10);
   ctx.fillRect(sx + 4, sy + TH/2 - 35, 3, 10);
-  // Brillo pelo
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.fillRect(sx - 4, sy + TH/2 - 36, 8, 2);
   
@@ -121,7 +125,6 @@ function drawPlayer(sx, sy, bo) {
   ctx.fillStyle = '#1a1a1a';
   ctx.fillRect(sx - 2, sy + TH/2 - 27, 2, 2);
   ctx.fillRect(sx + 2, sy + TH/2 - 27, 2, 2);
-  // Brillo especular ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(sx - 2, sy + TH/2 - 27, 1, 1);
   ctx.fillRect(sx + 2, sy + TH/2 - 27, 1, 1);
@@ -131,23 +134,28 @@ function drawPlayer(sx, sy, bo) {
   ctx.fillRect(sx - 2, sy + TH/2 - 22, 4, 1);
 }
 
-// === NPCs (con estilo único por tipo) ===
+// === NPCs DETALLADOS ===
 function drawNPC(sx, sy, npc) {
-  const color = npc.color;
-  
   // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(sx, sy + TH/2 + 6, 14, 5, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Cuerpo
+  // Piernas
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 5, sy + TH/2 - 8, 4, 9);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 4, 9);
+  
+  // Cuerpo con gradiente
   const bodyGrad = ctx.createLinearGradient(sx - 8, sy + TH/2 - 22, sx + 8, sy + TH/2);
-  bodyGrad.addColorStop(0, color);
-  bodyGrad.addColorStop(0.5, shadeColor(color, 20));
-  bodyGrad.addColorStop(1, shadeColor(color, -30));
+  bodyGrad.addColorStop(0, npc.color);
+  bodyGrad.addColorStop(0.5, shadeColor(npc.color, 20));
+  bodyGrad.addColorStop(1, shadeColor(npc.color, -30));
   ctx.fillStyle = bodyGrad;
   ctx.fillRect(sx - 8, sy + TH/2 - 22, 16, 16);
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.fillRect(sx - 8, sy + TH/2 - 22, 4, 16);
   
   // Cabeza
   ctx.fillStyle = '#ffe0b2';
@@ -188,15 +196,28 @@ function drawNPC(sx, sy, npc) {
   ctx.fill();
 }
 
-// === ÁRBOLES POR BIOMA ===
+// === ÁRBOLES ===
 function drawArbol(sx, sy, tipo) {
-  // Tronco
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(sx - 3, sy - 16, 6, 18);
-  
   switch(tipo) {
+    case 'roble':
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(sx - 4, sy - 14, 8, 18);
+      const roble = ctx.createRadialGradient(sx, sy - 30, 4, sx, sy - 28, 20);
+      roble.addColorStop(0, '#66bb6a');
+      roble.addColorStop(0.6, '#388e3c');
+      roble.addColorStop(1, '#1b5e20');
+      ctx.fillStyle = roble;
+      ctx.beginPath();
+      ctx.arc(sx, sy - 30, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(sx - 6, sy - 36, 7, 0, Math.PI * 2);
+      ctx.fill();
+      break;
     case 'pino':
-      // Copa triangular 3D
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(sx - 3, sy - 16, 6, 18);
       ctx.fillStyle = '#2e7d32';
       ctx.beginPath();
       ctx.moveTo(sx, sy - 50);
@@ -211,7 +232,6 @@ function drawArbol(sx, sy, tipo) {
       ctx.lineTo(sx + 14, sy - 14);
       ctx.closePath();
       ctx.fill();
-      // Sombra
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
       ctx.beginPath();
       ctx.moveTo(sx + 5, sy - 45);
@@ -223,7 +243,6 @@ function drawArbol(sx, sy, tipo) {
     case 'palmera':
       ctx.fillStyle = '#8d6e63';
       ctx.fillRect(sx - 4, sy - 20, 8, 24);
-      // Hojas
       ctx.fillStyle = '#4caf50';
       ctx.fillRect(sx - 20, sy - 28, 12, 4);
       ctx.fillRect(sx + 8, sy - 28, 12, 4);
@@ -241,19 +260,24 @@ function drawArbol(sx, sy, tipo) {
       ctx.lineTo(sx + 10, sy - 35);
       ctx.stroke();
       break;
-    default: // roble
-      const robleGrad = ctx.createRadialGradient(sx, sy - 30, 4, sx, sy - 25, 18);
-      robleGrad.addColorStop(0, '#66bb6a');
-      robleGrad.addColorStop(0.7, '#388e3c');
-      robleGrad.addColorStop(1, '#1b5e20');
-      ctx.fillStyle = robleGrad;
+    case 'abedul':
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillRect(sx - 3, sy - 14, 6, 18);
+      ctx.fillStyle = '#2e7d32';
       ctx.beginPath();
-      ctx.arc(sx, sy - 28, 18, 0, Math.PI * 2);
+      ctx.arc(sx, sy - 30, 16, 0, Math.PI * 2);
       ctx.fill();
-      // Brillo
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.beginPath();
-      ctx.arc(sx - 6, sy - 34, 6, 0, Math.PI * 2);
+      ctx.arc(sx - 5, sy - 34, 5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    default:
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(sx - 3, sy - 14, 6, 18);
+      ctx.fillStyle = '#388e3c';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 28, 16, 0, Math.PI * 2);
       ctx.fill();
       break;
   }
@@ -261,13 +285,11 @@ function drawArbol(sx, sy, tipo) {
 
 // === ROCA ===
 function drawRoca(sx, sy) {
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(sx, sy + TH/2 + 2, 12, 5, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Cara principal
   ctx.fillStyle = '#757575';
   ctx.beginPath();
   ctx.moveTo(sx - 12, sy + TH/2);
@@ -278,7 +300,6 @@ function drawRoca(sx, sy) {
   ctx.closePath();
   ctx.fill();
   
-  // Cara sombreada
   ctx.fillStyle = '#616161';
   ctx.beginPath();
   ctx.moveTo(sx + 2, sy - 18);
@@ -288,7 +309,6 @@ function drawRoca(sx, sy) {
   ctx.closePath();
   ctx.fill();
   
-  // Brillo
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.beginPath();
   ctx.moveTo(sx - 8, sy - 12);
@@ -300,25 +320,21 @@ function drawRoca(sx, sy) {
 
 // === CASA ===
 function drawCasa(sx, sy) {
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
-  ctx.ellipse(sx, sy + TH/2 + 2, 20, 8, 0, 0, Math.PI*2);
+  ctx.ellipse(sx, sy + TH/2 + 2, 22, 9, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Pared
-  const paredGrad = ctx.createLinearGradient(sx - 15, sy - 30, sx + 15, sy);
-  paredGrad.addColorStop(0, '#e8d8b0');
-  paredGrad.addColorStop(0.5, '#d4c49a');
-  paredGrad.addColorStop(1, '#b8a880');
-  ctx.fillStyle = paredGrad;
+  const pared = ctx.createLinearGradient(sx - 15, sy - 30, sx + 15, sy);
+  pared.addColorStop(0, '#e8d8b0');
+  pared.addColorStop(0.5, '#d4c49a');
+  pared.addColorStop(1, '#b8a880');
+  ctx.fillStyle = pared;
   ctx.fillRect(sx - 15, sy - 22, 30, 24);
   
-  // Sombra interna pared
   ctx.fillStyle = 'rgba(0,0,0,0.1)';
   ctx.fillRect(sx - 15, sy - 22, 5, 24);
   
-  // Techo
   ctx.fillStyle = '#c62828';
   ctx.beginPath();
   ctx.moveTo(sx, sy - 44);
@@ -326,61 +342,114 @@ function drawCasa(sx, sy) {
   ctx.lineTo(sx + 20, sy - 24);
   ctx.closePath();
   ctx.fill();
-  // Sombra techo
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.beginPath();
   ctx.moveTo(sx, sy - 44);
   ctx.lineTo(sx + 20, sy - 24);
   ctx.lineTo(sx + 20, sy - 20);
-  ctx.lineTo(sx, sy - 40);
   ctx.closePath();
   ctx.fill();
   
-  // Puerta
   ctx.fillStyle = '#5d4037';
   ctx.fillRect(sx - 5, sy - 10, 10, 12);
   ctx.fillStyle = '#ffc107';
-  ctx.fillRect(sx + 2, sy - 5, 2, 2); // Picaporte
+  ctx.fillRect(sx + 2, sy - 5, 2, 2);
   
-  // Ventana
   ctx.fillStyle = '#4fc3f7';
   ctx.fillRect(sx - 12, sy - 18, 6, 6);
   ctx.fillRect(sx + 6, sy - 18, 6, 6);
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillRect(sx - 12, sy - 18, 6, 1);
-  ctx.fillRect(sx + 6, sy - 18, 6, 1);
 }
 
-// === CAMINO (decoración de suelo) ===
-function drawCamino(sx, sy) {
-  ctx.fillStyle = '#a1887f';
-  ctx.fillRect(sx - TW/4, sy + TH/4, TW/2, TH/3);
+// === PUENTE ===
+function drawPuente(sx, sy) {
   ctx.fillStyle = '#8d6e63';
-  ctx.fillRect(sx - TW/4, sy + TH/4, TW/2, 2);
+  ctx.fillRect(sx - 20, sy - 4, 40, 8);
+  ctx.fillStyle = '#6d4c41';
+  ctx.fillRect(sx - 20, sy - 4, 40, 2);
+  ctx.fillRect(sx - 18, sy + 4, 3, 8);
+  ctx.fillRect(sx + 15, sy + 4, 3, 8);
+  // Pasamanos
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 20, sy - 6, 3, 4);
+  ctx.fillRect(sx + 17, sy - 6, 3, 4);
 }
 
-// === UTILIDADES ===
-function shadeColor(color, percent) {
-  const num = parseInt(color.replace('#',''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.min(255, Math.max(0, (num >> 16) + amt));
-  const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
-  const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
-  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+// === FUENTE ===
+function drawFuente(sx, sy) {
+  ctx.fillStyle = '#9e9e9e';
+  ctx.fillRect(sx - 12, sy - 8, 24, 12);
+  ctx.fillStyle = '#757575';
+  ctx.fillRect(sx - 10, sy - 6, 20, 8);
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillRect(sx - 8, sy - 4, 16, 4);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(sx - 6, sy - 3, 12, 1);
+}
+
+// === FLOR ===
+function drawFlor(sx, sy, color) {
+  ctx.fillStyle = '#4caf50';
+  ctx.fillRect(sx - 1, sy + TH/2 - 6, 2, 6);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(sx, sy + TH/2 - 8, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffeb3b';
+  ctx.beginPath();
+  ctx.arc(sx, sy + TH/2 - 8, 1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === HONGO ===
+function drawHongo(sx, sy, color) {
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(sx - 2, sy + TH/2 - 4, 4, 4);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(sx, sy + TH/2 - 5, 5, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.beginPath();
+  ctx.arc(sx - 1, sy + TH/2 - 7, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === ARBUSTO ===
+function drawArbusto(sx, sy, color) {
+  ctx.fillStyle = color || '#388e3c';
+  ctx.beginPath();
+  ctx.arc(sx, sy + TH/2 - 4, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx - 4, sy + TH/2 - 2, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(sx + 4, sy + TH/2 - 2, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.beginPath();
+  ctx.arc(sx - 2, sy + TH/2 - 6, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === RÍO (decoración de suelo con agua) ===
+function drawRio(sx, sy) {
+  ctx.fillStyle = '#1565c0';
+  ctx.fillRect(sx - TW/3, sy + TH/3, TW*2/3, TH/3);
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(sx - TW/4, sy + TH/3 + 1, TW/2, 1);
 }
 
 // === RENDER PRINCIPAL ===
 function renderMundo() {
   const cam = getCamera();
   
-  // Fondo negro
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
   
   const pgx = Math.floor(pl.gx);
   const pgy = Math.floor(pl.gy);
   
-  // Actualizar última dirección si se mueve
   if (pl.path.length > 0) {
     const t = pl.path[0];
     const dx = t.x - pl.fx;
@@ -390,7 +459,7 @@ function renderMundo() {
     }
   }
   
-  // Tiles con fog of war circular
+  // Tiles
   for (let y = Math.max(0, pgy - VISION_RADIO - 2); y < Math.min(WORLD_H, pgy + VISION_RADIO + 2); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO - 2); x < Math.min(WORLD_W, pgx + VISION_RADIO + 2); x++) {
       const s = iso(x, y);
@@ -407,7 +476,6 @@ function renderMundo() {
       const tile = world[y][x];
       const inPath = pl.path.find(p => p.x === x && p.y === y);
       
-      // Opacidad gradual
       let alpha = 1.0;
       if (dist > VISION_RADIO - 3) {
         alpha = Math.max(0, 1.0 - ((dist - (VISION_RADIO - 3)) / 3.5));
@@ -431,7 +499,7 @@ function renderMundo() {
     }
   }
   
-  // Decoraciones (solo si están en visión y no hay tile de agua)
+  // Decoraciones y vegetación
   for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
       const dx = x - pgx;
@@ -445,27 +513,46 @@ function renderMundo() {
       const sx = s.x + cam.x;
       const sy = s.y + cam.y;
       
-      // Árboles y rocas según bioma
       const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
       const tipo = v % 100;
       
-      if (tipo < 8) {
+      if (tipo < 6) {
+        // Árboles por bioma
         let tipoArbol = 'roble';
         switch(biomaId) {
-          case 1: tipoArbol = v % 2 === 0 ? 'pino' : 'roble'; break;
+          case 1: tipoArbol = v % 3 === 0 ? 'pino' : (v % 3 === 1 ? 'roble' : 'abedul'); break;
           case 2: tipoArbol = 'palmera'; break;
           case 3: tipoArbol = 'pino'; break;
           case 4: tipoArbol = v % 3 === 0 ? 'muerto' : 'roble'; break;
           case 5: tipoArbol = 'muerto'; break;
           case 6: tipoArbol = 'roble'; break;
+          case 0: tipoArbol = v % 2 === 0 ? 'roble' : 'abedul'; break;
         }
         drawArbol(sx, sy, tipoArbol);
-      } else if (tipo < 12) {
+      } else if (tipo < 9) {
         drawRoca(sx, sy);
-      } else if (tipo < 14 && biomaId === 0) {
+      } else if (tipo < 11 && biomaId === 0) {
         drawCasa(sx, sy);
-      } else if (tipo < 15 && biomaId === 0) {
-        drawCamino(sx, sy);
+      } else if (tipo < 12 && biomaId === 0) {
+        drawFuente(sx, sy);
+      } else if (tipo < 14) {
+        // Flores por bioma
+        let colorFlor = '#fff';
+        switch(biomaId) {
+          case 0: colorFlor = v % 2 === 0 ? '#fff' : '#ffeb3b'; break;
+          case 1: colorFlor = v % 2 === 0 ? '#9c27b0' : '#fff'; break;
+          case 2: colorFlor = '#ff9800'; break;
+          case 3: colorFlor = '#fff'; break;
+          case 4: colorFlor = '#fff'; break;
+        }
+        drawFlor(sx, sy, colorFlor);
+      } else if (tipo < 16) {
+        // Hongos
+        const colorHongo = v % 2 === 0 ? '#8d6e63' : (v % 3 === 0 ? '#4caf50' : '#2196f3');
+        drawHongo(sx, sy, colorHongo);
+      } else if (tipo < 19) {
+        // Arbustos
+        drawArbusto(sx, sy, v % 2 === 0 ? '#388e3c' : '#2e7d32');
       }
     }
   }
