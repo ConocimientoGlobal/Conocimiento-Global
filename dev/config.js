@@ -16,8 +16,8 @@ function calcularTileSize() {
   const ctx = c.getContext('2d');
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
-  // Tiles más grandes (12 en vez de 16)
-  const TILE = Math.min(W, H) / 12;
+  // Tiles grandes
+  const TILE = Math.min(W, H) / 10;
   TW = TILE;
   TH = TILE / 2;
 }
