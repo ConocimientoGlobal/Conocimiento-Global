@@ -4,11 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>PachaMirai</title>
-<style>
-*{margin:0;padding:0;touch-action:none;user-select:none}
-html,body{width:100%;height:100%;overflow:hidden;background:#000}
-canvas{display:block;position:fixed;top:0;left:0}
-</style>
+<style>*{margin:0;padding:0;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden;background:#000}canvas{display:block;position:fixed;top:0;left:0}</style>
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -34,8 +30,19 @@ const BIOMAS=[
 ];
 
 function getBioma(x,y){
-  const m=[[0,1,1,2,2,5,5,5],[1,1,2,2,3,5,5,6],[1,2,2,3,3,5,6,6],[2,2,3,3,4,5,6,6],[2,3,3,4,4,6,6,6],[3,3,4,4,4,6,6,6],[3,4,4,4,6,6,6,6],[4,4,4,6,6,6,6]];
-  return m[Math.min(7,Math.floor(y/8))][Math.min(7,Math.floor(x/8))];
+  const bx=Math.min(7,Math.floor(x/8));
+  const by=Math.min(7,Math.floor(y/8));
+  const m=[
+    [0,1,1,2,2,5,5,5],
+    [1,1,2,2,3,5,5,6],
+    [1,2,2,3,3,5,6,6],
+    [2,2,3,3,4,5,6,6],
+    [2,3,3,4,4,6,6,6],
+    [3,3,4,4,4,6,6,6],
+    [3,4,4,4,6,6,6,6],
+    [4,4,4,6,6,6,6,6]
+  ];
+  return m[by][bx];
 }
 
 const world=[];
@@ -78,6 +85,7 @@ function loop(){
   const camY=H/2-(pl.fx+pl.fy)*TH/2;
   const pgx=Math.floor(pl.gx),pgy=Math.floor(pl.gy);
   
+  // Tiles
   for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR+2);y++){
     for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR+2);x++){
       const sx=(x-y)*TW/2+camX;
@@ -85,6 +93,9 @@ function loop(){
       
       const dist=Math.sqrt((x-pgx)*(x-pgx)+(y-pgy)*(y-pgy));
       if(dist>VR+0.5)continue;
+      
+      const biomaId=getBioma(x,y);
+      const bio=BIOMAS[biomaId];
       
       ctx.beginPath();
       ctx.moveTo(sx,sy);
@@ -94,13 +105,12 @@ function loop(){
       ctx.closePath();
       
       if(world[y][x]===1){
-        ctx.fillStyle=BIOMAS[getBioma(x,y)].w;
+        ctx.fillStyle=bio.w;
         ctx.fill();
         ctx.strokeStyle='rgba(100,180,220,0.3)';
         ctx.lineWidth=1;
         ctx.stroke();
       }else{
-        const bio=BIOMAS[getBioma(x,y)];
         const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
         ctx.fillStyle=bio.t[v%bio.t.length];
         ctx.fill();
@@ -122,6 +132,7 @@ function loop(){
     }
   }
   
+  // Árboles
   for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR);y++){
     for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR);x++){
       const dist=Math.sqrt((x-pgx)*(x-pgx)+(y-pgy)*(y-pgy));
@@ -138,7 +149,8 @@ function loop(){
         ctx.ellipse(sx+4,sy+TH/2,10,4,0.3,0,Math.PI*2);
         ctx.fill();
         
-        const tipo=getBioma(x,y)===1&&v%2===0?'pino':getBioma(x,y)===2?'palmera':'roble';
+        const biomaId=getBioma(x,y);
+        const tipo=biomaId===1&&v%2===0?'pino':biomaId===2?'palmera':'roble';
         
         if(tipo==='pino'){
           ctx.fillStyle='#5d4037';ctx.fillRect(sx-2,sy-10,4,12);
@@ -161,6 +173,7 @@ function loop(){
     }
   }
   
+  // NPCs
   for(const n of npcs){
     const dist=Math.sqrt((n.x-pgx)*(n.x-pgx)+(n.y-pgy)*(n.y-pgy));
     if(dist>VR)continue;
@@ -176,6 +189,7 @@ function loop(){
     ctx.fillStyle='#fff';ctx.font='6px monospace';ctx.textAlign='center';ctx.fillText(n.n,sx,sy-8);
   }
   
+  // Jugador
   const px=(pl.fx-pl.fy)*TW/2+camX;
   const py=(pl.fx+pl.fy)*TH/2+camY;
   const bo=pl.frame===0?0:1;
@@ -190,6 +204,7 @@ function loop(){
   ctx.fillStyle='#fff';ctx.fillRect(px-2,py+TH/2-24,2,2);ctx.fillRect(px+1,py+TH/2-24,2,2);
   ctx.fillStyle='#1a1a1a';ctx.fillRect(px-1,py+TH/2-23,1,1);ctx.fillRect(px+2,py+TH/2-23,1,1);
   
+  // UI
   ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(10,10,140,50);
   ctx.fillStyle='#fff';ctx.font='bold 12px monospace';ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText('Lv.1 Hero',18,24);
@@ -200,11 +215,13 @@ function loop(){
   
   ctx.fillStyle='#0f0';ctx.font='9px monospace';ctx.textAlign='left';ctx.fillText('Pos:'+Math.floor(pl.gx)+','+Math.floor(pl.gy),10,H-15);
   
+  // Minimapa
   const mmW=100,mmH=100,mmX=W-mmW-10,mmY=H-mmH-10;
   ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(mmX,mmY,mmW,mmH);
   for(let y=0;y<WORLD_H;y+=2){
     for(let x=0;x<WORLD_W;x+=2){
-      const b=BIOMAS[getBioma(x,y)];
+      const biomaId=getBioma(x,y);
+      const b=BIOMAS[biomaId];
       ctx.fillStyle=world[y][x]===1?b.w:b.t[0];
       ctx.fillRect(mmX+(x/WORLD_W)*mmW,mmY+(y/WORLD_H)*mmH,2,2);
     }
@@ -247,7 +264,7 @@ c.addEventListener('touchstart',e=>{
 
 loop();
 }catch(e){
-  document.body.innerHTML='<h1 style="color:red;padding:20px">ERROR: '+e.message+'</h1>';
+  document.body.innerHTML='<h1 style="color:red;padding:20px">ERROR: '+e.message+'<br><br>'+e.stack+'</h1>';
 }
 </script>
 </body>
