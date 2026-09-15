@@ -98,6 +98,7 @@ const cofres=[
 
 const pl={gx:8,gy:8,fx:8,fy:8,path:[],frame:0,ft:0,hp:100,mhp:100,oro:50};
 let frameCount=0;
+let TW=80,TH=40; // Globales para funciones draw
 const particles=[];
 
 // === FUNCIONES ===
@@ -289,7 +290,7 @@ function drawRock16(sx,sy,bio){
 }
 
 // === CASA 16-BIT ===
-function drawHouse16(sx,sy,v,TH){
+function drawHouse16(sx,sy,v){
   ctx.fillStyle='rgba(0,0,0,0.25)';
   ctx.beginPath();ctx.ellipse(sx+6,sy+TH/2,14,5,0.3,0,Math.PI*2);ctx.fill();
   
@@ -342,8 +343,8 @@ function loop(){
   frameCount++;
   const dt=1/60;
   const W=c.width,H=c.height;
-  const TW=Math.min(W,H)/4;
-  const TH=TW/2;
+  TW=Math.min(W,H)/4;
+  TH=TW/2;
   
   if(msgTimeout>0){msgTimeout-=dt;if(msgTimeout<=0)msgEl.style.display='none';}
   
@@ -419,7 +420,7 @@ function loop(){
       }else if(tipo<13){
         drawRock16(sx,sy,bio);
       }else if(tipo<15&&bio.id===0){
-        drawHouse16(sx,sy,v,TH);
+        drawHouse16(sx,sy,v);
       }else if(tipo<17){
         drawFlower16(sx,sy,bio.f[v%bio.f.length],v);
       }else if(tipo<19&&bio.id===4){
@@ -554,7 +555,7 @@ c.addEventListener('touchstart',e=>{
   e.preventDefault();
   if(pl.path.length>0)return;
   const W=c.width,H=c.height;
-  const TW=Math.min(W,H)/4,TH=TW/2;
+  TW=Math.min(W,H)/4,TH=TW/2;
   const camX=W/2-(pl.fx-pl.fy)*TW/2;
   const camY=H/2-(pl.fx+pl.fy)*TH/2;
   
