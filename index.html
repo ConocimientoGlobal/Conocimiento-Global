@@ -289,7 +289,7 @@ function drawRock16(sx,sy,bio){
 }
 
 // === CASA 16-BIT ===
-function drawHouse16(sx,sy,v){
+function drawHouse16(sx,sy,v,TH){
   ctx.fillStyle='rgba(0,0,0,0.25)';
   ctx.beginPath();ctx.ellipse(sx+6,sy+TH/2,14,5,0.3,0,Math.PI*2);ctx.fill();
   
@@ -419,7 +419,7 @@ function loop(){
       }else if(tipo<13){
         drawRock16(sx,sy,bio);
       }else if(tipo<15&&bio.id===0){
-        drawHouse16(sx,sy,v);
+        drawHouse16(sx,sy,v,TH);
       }else if(tipo<17){
         drawFlower16(sx,sy,bio.f[v%bio.f.length],v);
       }else if(tipo<19&&bio.id===4){
