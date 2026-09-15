@@ -120,7 +120,7 @@ function addParticle(x,y,color){
 function drawTile(sx,sy,bio,x,y){
   const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
   const pal=bio.p;
-  const ps=4;
+  const ps=2;
   
   for(let py=0;py<TH;py+=ps){
     for(let px=0;px<TW;px+=ps){
@@ -150,7 +150,7 @@ function drawTile(sx,sy,bio,x,y){
 function drawWater(sx,sy,bio,x,y){
   const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
   const pal=bio.wp;
-  const ps=4;
+  const ps=2;
   
   for(let py=0;py<TH;py+=ps){
     for(let px=0;px<TW;px+=ps){
