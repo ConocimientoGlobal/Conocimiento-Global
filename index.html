@@ -136,10 +136,11 @@ function esCaminable(x, y) {
 
 // === dev/render.js ===
 // ============================================================================
-// RENDER - Proyección isométrica, dibujado y Fog of War
+// RENDER - Iluminación Waven-style, decoración, personajes detallados
 // ============================================================================
 
 let ctx;
+let lastDir = {x: 0, y: 1}; // Última dirección del jugador
 
 function iso(x, y) {
   return {x: (x - y) * TW / 2, y: (x + y) * TH / 2};
@@ -171,53 +172,84 @@ function drawDiamond(sx, sy, w, h, fill, stroke) {
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
 
+// === PERSONAJE PRINCIPAL (con iluminación Waven-style) ===
 function drawPlayer(sx, sy, bo) {
-  // Sombra
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  // Sombra proyectada
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
-  ctx.ellipse(sx, sy + TH/2 + 6, 14, 5, 0, 0, Math.PI*2);
+  ctx.ellipse(sx, sy + TH/2 + 6, 16, 6, 0, 0, Math.PI*2);
   ctx.fill();
   
   // Zapatos
   ctx.fillStyle = '#3e2723';
-  ctx.fillRect(sx - 6, sy + TH/2, 5, 4);
-  ctx.fillRect(sx + 1, sy + TH/2, 5, 4);
+  ctx.fillRect(sx - 7, sy + TH/2, 6, 5);
+  ctx.fillRect(sx + 1, sy + TH/2, 6, 5);
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 7, sy + TH/2 + 1, 6, 2);
+  ctx.fillRect(sx + 1, sy + TH/2 + 1, 6, 2);
   
   // Piernas
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(sx - 5, sy + TH/2 - 8, 4, 9 + bo);
-  ctx.fillRect(sx + 1, sy + TH/2 - 8, 4, 9 + bo);
+  ctx.fillStyle = '#6d4c41';
+  ctx.fillRect(sx - 6, sy + TH/2 - 8, 5, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 5, 9 + bo);
+  // Sombra interna piernas
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(sx - 6, sy + TH/2 - 8, 2, 9 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 2, 9 + bo);
   
-  // Cuerpo (armadura)
-  ctx.fillStyle = '#1976d2';
-  ctx.fillRect(sx - 8, sy + TH/2 - 22, 16, 16);
+  // Cuerpo (armadura con gradiente)
+  const bodyGrad = ctx.createLinearGradient(sx - 10, sy + TH/2 - 24, sx + 10, sy + TH/2);
+  bodyGrad.addColorStop(0, '#1565c0');
+  bodyGrad.addColorStop(0.5, '#1976d2');
+  bodyGrad.addColorStop(1, '#0d47a1');
+  ctx.fillStyle = bodyGrad;
+  ctx.fillRect(sx - 9, sy + TH/2 - 22, 18, 16);
+  // Sombra interna
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(sx - 9, sy + TH/2 - 22, 4, 16);
+  ctx.fillRect(sx + 5, sy + TH/2 - 22, 4, 16);
+  
   // Hombreras
   ctx.fillStyle = '#1565c0';
-  ctx.fillRect(sx - 10, sy + TH/2 - 24, 4, 6);
-  ctx.fillRect(sx + 6, sy + TH/2 - 24, 4, 6);
+  ctx.fillRect(sx - 12, sy + TH/2 - 24, 5, 7);
+  ctx.fillRect(sx + 7, sy + TH/2 - 24, 5, 7);
+  // Brillo hombreras
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(sx - 11, sy + TH/2 - 23, 3, 2);
+  ctx.fillRect(sx + 8, sy + TH/2 - 23, 3, 2);
+  
   // Cinturón
   ctx.fillStyle = '#ffc107';
-  ctx.fillRect(sx - 8, sy + TH/2 - 10, 16, 3);
+  ctx.fillRect(sx - 9, sy + TH/2 - 10, 18, 3);
+  // Hebulla con brillo
   ctx.fillStyle = '#ff8f00';
-  ctx.fillRect(sx - 2, sy + TH/2 - 10, 4, 3); // Hebulla
+  ctx.fillRect(sx - 3, sy + TH/2 - 11, 6, 5);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(sx - 2, sy + TH/2 - 10, 4, 2);
   
   // Brazos
   ctx.fillStyle = '#1976d2';
-  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 12);
-  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 12);
+  ctx.fillRect(sx - 13, sy + TH/2 - 20, 4, 12);
+  ctx.fillRect(sx + 9, sy + TH/2 - 20, 4, 12);
   ctx.fillStyle = '#ffe0b2';
-  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 4); // Mano izq
-  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 4); // Mano der
+  ctx.fillRect(sx - 13, sy + TH/2 - 20, 4, 4);
+  ctx.fillRect(sx + 9, sy + TH/2 - 20, 4, 4);
   
   // Cabeza
-  ctx.fillStyle = '#ffe0b2';
+  const headGrad = ctx.createRadialGradient(sx - 2, sy + TH/2 - 30, 1, sx, sy + TH/2 - 28, 8);
+  headGrad.addColorStop(0, '#fff3e0');
+  headGrad.addColorStop(1, '#ffe0b2');
+  ctx.fillStyle = headGrad;
   ctx.fillRect(sx - 5, sy + TH/2 - 32, 10, 9);
   
-  // Pelo
+  // Pelo con brillos
   ctx.fillStyle = '#3e2723';
-  ctx.fillRect(sx - 6, sy + TH/2 - 34, 12, 5);
-  ctx.fillRect(sx - 6, sy + TH/2 - 34, 2, 8);
-  ctx.fillRect(sx + 4, sy + TH/2 - 34, 2, 8);
+  ctx.fillRect(sx - 7, sy + TH/2 - 35, 14, 7);
+  ctx.fillRect(sx - 7, sy + TH/2 - 35, 3, 10);
+  ctx.fillRect(sx + 4, sy + TH/2 - 35, 3, 10);
+  // Brillo pelo
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillRect(sx - 4, sy + TH/2 - 36, 8, 2);
   
   // Ojos
   ctx.fillStyle = '#fff';
@@ -226,7 +258,7 @@ function drawPlayer(sx, sy, bo) {
   ctx.fillStyle = '#1a1a1a';
   ctx.fillRect(sx - 2, sy + TH/2 - 27, 2, 2);
   ctx.fillRect(sx + 2, sy + TH/2 - 27, 2, 2);
-  // Brillos
+  // Brillo especular ojos
   ctx.fillStyle = '#fff';
   ctx.fillRect(sx - 2, sy + TH/2 - 27, 1, 1);
   ctx.fillRect(sx + 2, sy + TH/2 - 27, 1, 1);
@@ -236,63 +268,41 @@ function drawPlayer(sx, sy, bo) {
   ctx.fillRect(sx - 2, sy + TH/2 - 22, 4, 1);
 }
 
-function drawNPC(sx, sy, npc, bo) {
+// === NPCs (con estilo único por tipo) ===
+function drawNPC(sx, sy, npc) {
   const color = npc.color;
   
   // Sombra
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(sx, sy + TH/2 + 6, 14, 5, 0, 0, Math.PI*2);
   ctx.fill();
   
-  // Zapatos
-  ctx.fillStyle = '#3e2723';
-  ctx.fillRect(sx - 6, sy + TH/2, 5, 4);
-  ctx.fillRect(sx + 1, sy + TH/2, 5, 4);
-  
-  // Piernas
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(sx - 5, sy + TH/2 - 8, 4, 9 + bo);
-  ctx.fillRect(sx + 1, sy + TH/2 - 8, 4, 9 + bo);
-  
   // Cuerpo
-  ctx.fillStyle = color;
+  const bodyGrad = ctx.createLinearGradient(sx - 8, sy + TH/2 - 22, sx + 8, sy + TH/2);
+  bodyGrad.addColorStop(0, color);
+  bodyGrad.addColorStop(0.5, shadeColor(color, 20));
+  bodyGrad.addColorStop(1, shadeColor(color, -30));
+  ctx.fillStyle = bodyGrad;
   ctx.fillRect(sx - 8, sy + TH/2 - 22, 16, 16);
-  // Cuello/Collar
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.fillRect(sx - 6, sy + TH/2 - 24, 12, 3);
-  // Cinturón
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(sx - 8, sy + TH/2 - 10, 16, 3);
-  
-  // Brazos
-  ctx.fillStyle = color;
-  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 12);
-  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 12);
-  ctx.fillStyle = '#ffe0b2';
-  ctx.fillRect(sx - 11, sy + TH/2 - 20, 3, 4);
-  ctx.fillRect(sx + 8, sy + TH/2 - 20, 3, 4);
   
   // Cabeza
   ctx.fillStyle = '#ffe0b2';
   ctx.fillRect(sx - 5, sy + TH/2 - 32, 10, 9);
   
-  // Pelo según tipo de NPC
+  // Pelo según tipo
   ctx.fillStyle = '#3e2723';
   if (npc.nombre === 'Mago' || npc.nombre === 'Bruja') {
-    // Pelo largo/puntoy
     ctx.fillRect(sx - 7, sy + TH/2 - 36, 14, 8);
-    ctx.fillRect(sx - 8, sy + TH/2 - 32, 3, 10);
-    ctx.fillRect(sx + 5, sy + TH/2 - 32, 3, 10);
+    ctx.fillRect(sx - 9, sy + TH/2 - 32, 3, 12);
+    ctx.fillRect(sx + 6, sy + TH/2 - 32, 3, 12);
   } else if (npc.nombre === 'Rey') {
-    // Corona
     ctx.fillStyle = '#ffd600';
-    ctx.fillRect(sx - 6, sy + TH/2 - 36, 12, 6);
-    ctx.fillRect(sx - 6, sy + TH/2 - 38, 2, 3);
-    ctx.fillRect(sx - 1, sy + TH/2 - 39, 2, 4);
-    ctx.fillRect(sx + 4, sy + TH/2 - 38, 2, 3);
+    ctx.fillRect(sx - 7, sy + TH/2 - 37, 14, 7);
+    ctx.fillRect(sx - 7, sy + TH/2 - 39, 2, 3);
+    ctx.fillRect(sx - 1, sy + TH/2 - 40, 2, 4);
+    ctx.fillRect(sx + 5, sy + TH/2 - 39, 2, 3);
   } else {
-    // Pelo normal
     ctx.fillRect(sx - 6, sy + TH/2 - 34, 12, 5);
   }
   
@@ -304,20 +314,201 @@ function drawNPC(sx, sy, npc, bo) {
   ctx.fillRect(sx - 2, sy + TH/2 - 27, 2, 2);
   ctx.fillRect(sx + 2, sy + TH/2 - 27, 2, 2);
   
-  // Boca
-  ctx.fillStyle = '#d78a7a';
-  ctx.fillRect(sx - 2, sy + TH/2 - 22, 4, 1);
-  
-  // Indicador de interacción (punto encima)
+  // Indicador interacción
   ctx.fillStyle = '#ffd700';
   ctx.beginPath();
-  ctx.arc(sx, sy + TH/2 - 42, 2, 0, Math.PI * 2);
+  ctx.arc(sx, sy + TH/2 - 44, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath();
+  ctx.arc(sx - 1, sy + TH/2 - 45, 1, 0, Math.PI * 2);
   ctx.fill();
 }
 
+// === ÁRBOLES POR BIOMA ===
+function drawArbol(sx, sy, tipo) {
+  // Tronco
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 3, sy - 16, 6, 18);
+  
+  switch(tipo) {
+    case 'pino':
+      // Copa triangular 3D
+      ctx.fillStyle = '#2e7d32';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 50);
+      ctx.lineTo(sx - 18, sy - 12);
+      ctx.lineTo(sx + 18, sy - 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#388e3c';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 45);
+      ctx.lineTo(sx - 14, sy - 14);
+      ctx.lineTo(sx + 14, sy - 14);
+      ctx.closePath();
+      ctx.fill();
+      // Sombra
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.beginPath();
+      ctx.moveTo(sx + 5, sy - 45);
+      ctx.lineTo(sx + 18, sy - 12);
+      ctx.lineTo(sx + 5, sy - 12);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'palmera':
+      ctx.fillStyle = '#8d6e63';
+      ctx.fillRect(sx - 4, sy - 20, 8, 24);
+      // Hojas
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(sx - 20, sy - 28, 12, 4);
+      ctx.fillRect(sx + 8, sy - 28, 12, 4);
+      ctx.fillRect(sx - 6, sy - 36, 12, 4);
+      break;
+    case 'muerto':
+      ctx.fillStyle = '#4e342e';
+      ctx.fillRect(sx - 2, sy - 30, 4, 34);
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 30);
+      ctx.lineTo(sx - 12, sy - 40);
+      ctx.moveTo(sx, sy - 25);
+      ctx.lineTo(sx + 10, sy - 35);
+      ctx.stroke();
+      break;
+    default: // roble
+      const robleGrad = ctx.createRadialGradient(sx, sy - 30, 4, sx, sy - 25, 18);
+      robleGrad.addColorStop(0, '#66bb6a');
+      robleGrad.addColorStop(0.7, '#388e3c');
+      robleGrad.addColorStop(1, '#1b5e20');
+      ctx.fillStyle = robleGrad;
+      ctx.beginPath();
+      ctx.arc(sx, sy - 28, 18, 0, Math.PI * 2);
+      ctx.fill();
+      // Brillo
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(sx - 6, sy - 34, 6, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+  }
+}
+
+// === ROCA ===
+function drawRoca(sx, sy) {
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + TH/2 + 2, 12, 5, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Cara principal
+  ctx.fillStyle = '#757575';
+  ctx.beginPath();
+  ctx.moveTo(sx - 12, sy + TH/2);
+  ctx.lineTo(sx - 8, sy - 12);
+  ctx.lineTo(sx + 2, sy - 18);
+  ctx.lineTo(sx + 12, sy - 10);
+  ctx.lineTo(sx + 12, sy + TH/2);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Cara sombreada
+  ctx.fillStyle = '#616161';
+  ctx.beginPath();
+  ctx.moveTo(sx + 2, sy - 18);
+  ctx.lineTo(sx + 12, sy - 10);
+  ctx.lineTo(sx + 12, sy + TH/2);
+  ctx.lineTo(sx + 2, sy + TH/2);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Brillo
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.beginPath();
+  ctx.moveTo(sx - 8, sy - 12);
+  ctx.lineTo(sx + 2, sy - 18);
+  ctx.lineTo(sx - 2, sy - 8);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// === CASA ===
+function drawCasa(sx, sy) {
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + TH/2 + 2, 20, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Pared
+  const paredGrad = ctx.createLinearGradient(sx - 15, sy - 30, sx + 15, sy);
+  paredGrad.addColorStop(0, '#e8d8b0');
+  paredGrad.addColorStop(0.5, '#d4c49a');
+  paredGrad.addColorStop(1, '#b8a880');
+  ctx.fillStyle = paredGrad;
+  ctx.fillRect(sx - 15, sy - 22, 30, 24);
+  
+  // Sombra interna pared
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.fillRect(sx - 15, sy - 22, 5, 24);
+  
+  // Techo
+  ctx.fillStyle = '#c62828';
+  ctx.beginPath();
+  ctx.moveTo(sx, sy - 44);
+  ctx.lineTo(sx - 20, sy - 24);
+  ctx.lineTo(sx + 20, sy - 24);
+  ctx.closePath();
+  ctx.fill();
+  // Sombra techo
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.beginPath();
+  ctx.moveTo(sx, sy - 44);
+  ctx.lineTo(sx + 20, sy - 24);
+  ctx.lineTo(sx + 20, sy - 20);
+  ctx.lineTo(sx, sy - 40);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Puerta
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 5, sy - 10, 10, 12);
+  ctx.fillStyle = '#ffc107';
+  ctx.fillRect(sx + 2, sy - 5, 2, 2); // Picaporte
+  
+  // Ventana
+  ctx.fillStyle = '#4fc3f7';
+  ctx.fillRect(sx - 12, sy - 18, 6, 6);
+  ctx.fillRect(sx + 6, sy - 18, 6, 6);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(sx - 12, sy - 18, 6, 1);
+  ctx.fillRect(sx + 6, sy - 18, 6, 1);
+}
+
+// === CAMINO (decoración de suelo) ===
+function drawCamino(sx, sy) {
+  ctx.fillStyle = '#a1887f';
+  ctx.fillRect(sx - TW/4, sy + TH/4, TW/2, TH/3);
+  ctx.fillStyle = '#8d6e63';
+  ctx.fillRect(sx - TW/4, sy + TH/4, TW/2, 2);
+}
+
+// === UTILIDADES ===
+function shadeColor(color, percent) {
+  const num = parseInt(color.replace('#',''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const G = Math.min(255, Math.max(0, (num >> 8 & 0x00FF) + amt));
+  const B = Math.min(255, Math.max(0, (num & 0x0000FF) + amt));
+  return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+}
+
+// === RENDER PRINCIPAL ===
 function renderMundo() {
   const cam = getCamera();
-  const camCell = screenToCell(W/2, H/2);
   
   // Fondo negro
   ctx.fillStyle = '#000';
@@ -326,9 +517,19 @@ function renderMundo() {
   const pgx = Math.floor(pl.gx);
   const pgy = Math.floor(pl.gy);
   
+  // Actualizar última dirección si se mueve
+  if (pl.path.length > 0) {
+    const t = pl.path[0];
+    const dx = t.x - pl.fx;
+    const dy = t.y - pl.fy;
+    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+      lastDir = {x: Math.sign(dx), y: Math.sign(dy)};
+    }
+  }
+  
   // Tiles con fog of war circular
-  for (let y = Math.max(0, camCell.y - VISION_RADIO - 2); y < Math.min(WORLD_H, camCell.y + VISION_RADIO + 2); y++) {
-    for (let x = Math.max(0, camCell.x - VISION_RADIO - 2); x < Math.min(WORLD_W, camCell.x + VISION_RADIO + 2); x++) {
+  for (let y = Math.max(0, pgy - VISION_RADIO - 2); y < Math.min(WORLD_H, pgy + VISION_RADIO + 2); y++) {
+    for (let x = Math.max(0, pgx - VISION_RADIO - 2); x < Math.min(WORLD_W, pgx + VISION_RADIO + 2); x++) {
       const s = iso(x, y);
       const sx = s.x + cam.x - TW/2;
       const sy = s.y + cam.y - TH/2;
@@ -357,15 +558,6 @@ function renderMundo() {
         ctx.fillRect(sx - 8, sy + TH/2, 6, 2);
       } else {
         drawDiamond(sx, sy, TW, TH, (x+y) % 2 === 0 ? bioma.color1 : bioma.color2, 'rgba(0,0,0,0.12)');
-        
-        ctx.fillStyle = 'rgba(0,0,0,0.08)';
-        ctx.beginPath();
-        ctx.moveTo(sx, sy + TH);
-        ctx.lineTo(sx + TW/2, sy + TH/2);
-        ctx.lineTo(sx + TW/2, sy + TH + TH/2);
-        ctx.lineTo(sx, sy + TH + TH/2);
-        ctx.closePath();
-        ctx.fill();
       }
       
       if (inPath) {
@@ -373,6 +565,45 @@ function renderMundo() {
       }
       
       ctx.globalAlpha = 1.0;
+    }
+  }
+  
+  // Decoraciones (solo si están en visión y no hay tile de agua)
+  for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
+    for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
+      const dx = x - pgx;
+      const dy = y - pgy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > VISION_RADIO) continue;
+      if (world[y][x] !== 0) continue;
+      
+      const biomaId = getBioma(x, y);
+      const s = iso(x, y);
+      const sx = s.x + cam.x;
+      const sy = s.y + cam.y;
+      
+      // Árboles y rocas según bioma
+      const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+      const tipo = v % 100;
+      
+      if (tipo < 8) {
+        let tipoArbol = 'roble';
+        switch(biomaId) {
+          case 1: tipoArbol = v % 2 === 0 ? 'pino' : 'roble'; break;
+          case 2: tipoArbol = 'palmera'; break;
+          case 3: tipoArbol = 'pino'; break;
+          case 4: tipoArbol = v % 3 === 0 ? 'muerto' : 'roble'; break;
+          case 5: tipoArbol = 'muerto'; break;
+          case 6: tipoArbol = 'roble'; break;
+        }
+        drawArbol(sx, sy, tipoArbol);
+      } else if (tipo < 12) {
+        drawRoca(sx, sy);
+      } else if (tipo < 14 && biomaId === 0) {
+        drawCasa(sx, sy);
+      } else if (tipo < 15 && biomaId === 0) {
+        drawCamino(sx, sy);
+      }
     }
   }
   
@@ -387,11 +618,12 @@ function renderMundo() {
     const s = iso(co.x, co.y);
     const sx = s.x + cam.x;
     const sy = s.y + cam.y;
-    if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
     ctx.fillStyle = '#ffd700';
-    ctx.fillRect(sx - 5, sy - 3, 10, 6);
+    ctx.fillRect(sx - 6, sy - 4, 12, 8);
     ctx.fillStyle = '#b8860b';
-    ctx.fillRect(sx - 5, sy - 3, 10, 2);
+    ctx.fillRect(sx - 6, sy - 4, 12, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(sx - 5, sy - 3, 4, 2);
   }
   
   // NPCs
@@ -404,12 +636,11 @@ function renderMundo() {
     const s = iso(n.x, n.y);
     const sx = s.x + cam.x;
     const sy = s.y + cam.y;
-    if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
-    drawNPC(sx, sy, n, 0);
+    drawNPC(sx, sy, n);
     ctx.fillStyle = '#fff';
     ctx.font = '7px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(n.nombre, sx, sy - 12);
+    ctx.fillText(n.nombre, sx, sy - 15);
   }
   
   // Jugador
@@ -509,7 +740,7 @@ function moverJugador(dt) {
 
 // === dev/ui.js ===
 // ============================================================================
-// UI - HUD, Minimapa con Fog of War, Mensajes
+// UI - HUD, Minimapa DINÁMICO con rotación, Mensajes
 // ============================================================================
 
 let mensaje = {titulo: '', texto: '', t: 0};
@@ -576,71 +807,95 @@ function renderUI() {
   ctx.fillText('Bioma: ' + bioma.nombre, 18, H - 45);
   ctx.fillText('Pos: ' + Math.floor(pl.gx) + ',' + Math.floor(pl.gy), 18, H - 30);
   
-  // === MINIMAPA CON FOG OF WAR ===
+  // === MINIMAPA DINÁMICO CON ROTACIÓN ===
   const mmW = 100, mmH = 100;
   const mmX = W - mmW - 10, mmY = H - mmH - 10;
+  const mmCX = mmX + mmW / 2;
+  const mmCY = mmY + mmH / 2;
   
   // Fondo
   ctx.fillStyle = 'rgba(0,0,0,0.8)';
   ctx.fillRect(mmX, mmY, mmW, mmH);
   
-  // Borde circular del fog
-  const mmCX = mmX + mmW / 2;
-  const mmCY = mmY + mmH / 2;
-  const mmR = mmW / 2 - 2;
+  // Guardar contexto para rotación
+  ctx.save();
   
-  // Biomas en minimapa con fog circular
-  const cellSize = 2;
+  // Trasladar al centro del minimapa
+  ctx.translate(mmCX, mmCY);
+  
+  // Rotar según la dirección del jugador
+  // Calcular ángulo de rotación basado en lastDir
+  let angle = 0;
+  if (lastDir.x !== 0 || lastDir.y !== 0) {
+    angle = Math.atan2(lastDir.y, lastDir.x) - Math.PI / 2;
+  }
+  ctx.rotate(angle);
+  
+  // Biomas en minimapa (rotados)
   for (let y = 0; y < WORLD_H; y += 1) {
     for (let x = 0; x < WORLD_W; x += 1) {
-      // Convertir coordenadas de mundo a coordenadas de minimapa
-      const mx = mmX + (x / WORLD_W) * mmW;
-      const my = mmY + (y / WORLD_H) * mmH;
-      
-      // Distancia al centro del minimapa (posición del jugador)
-      const dx = mx - mmCX;
-      const dy = my - mmCY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+      // Convertir coordenadas de mundo a offset desde el jugador
+      const ox = (x - pl.gx) / WORLD_W * mmW;
+      const oy = (y - pl.gy) / WORLD_H * mmH;
       
       // Solo mostrar si está dentro del radio circular
-      if (dist > mmR) continue;
+      const dist = Math.sqrt(ox*ox + oy*oy);
+      if (dist > mmW / 2 - 2) continue;
       
       const b = BIOMAS[getBioma(x, y)];
       ctx.fillStyle = b.color1;
-      ctx.fillRect(mx, my, cellSize, cellSize);
+      ctx.fillRect(ox - 1, oy - 1, 2, 2);
     }
   }
   
-  // Fog circular en minimapa: oscurecer fuera del radio del jugador
-  const fogRadius = (VISION_RADIO / WORLD_W) * mmW;
-  const fogInner = fogRadius - 4;
+  // NPCs en minimapa (rotados, solo en visión)
+  ctx.fillStyle = '#0ff';
+  for (const n of npcs) {
+    const ox = (n.x - pl.gx) / WORLD_W * mmW;
+    const oy = (n.y - pl.gy) / WORLD_H * mmH;
+    const dist = Math.sqrt(ox*ox + oy*oy);
+    if (dist <= mmW / 2 - 2) {
+      ctx.fillRect(ox - 1, oy - 1, 2, 2);
+    }
+  }
+  
+  // Restaurar contexto (sin rotación)
+  ctx.restore();
+  
+  // Borde circular del fog (no rotado)
+  const fogRadius = mmW / 2 - 2;
+  const fogInner = fogRadius - 6;
   
   // Gradiente circular para bordes suaves
   const gradient = ctx.createRadialGradient(mmCX, mmCY, fogInner, mmCX, mmCY, fogRadius + 4);
   gradient.addColorStop(0, 'rgba(0,0,0,0)');
-  gradient.addColorStop(0.6, 'rgba(0,0,0,0.3)');
-  gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+  gradient.addColorStop(0.6, 'rgba(0,0,0,0.4)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0.95)');
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(mmCX, mmCY, fogRadius + 4, 0, Math.PI * 2);
   ctx.fill();
   
-  // Jugador en minimapa
+  // Jugador en minimapa (centro, con indicador de dirección)
   ctx.fillStyle = '#ff0';
   ctx.fillRect(mmCX - 3, mmCY - 3, 6, 6);
   
-  // NPCs en minimapa (solo si están en visión circular)
-  ctx.fillStyle = '#0ff';
-  for (const n of npcs) {
-    const nmx = mmX + (n.x / WORLD_W) * mmW;
-    const nmy = mmY + (n.y / WORLD_H) * mmH;
-    const ndx = nmx - mmCX;
-    const ndy = nmy - mmCY;
-    const ndist = Math.sqrt(ndx*ndx + ndy*ndy);
-    if (ndist <= fogRadius) {
-      ctx.fillRect(nmx - 1, nmy - 1, 2, 2);
-    }
+  // Indicador de dirección (flecha)
+  if (lastDir.x !== 0 || lastDir.y !== 0) {
+    ctx.fillStyle = '#ff0';
+    ctx.beginPath();
+    const arrowLen = 8;
+    ctx.moveTo(mmCX, mmCY - arrowLen);
+    ctx.lineTo(mmCX - 3, mmCY - arrowLen + 4);
+    ctx.lineTo(mmCX + 3, mmCY - arrowLen + 4);
+    ctx.closePath();
+    ctx.fill();
   }
+  
+  // Borde del minimapa
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(mmX, mmY, mmW, mmH);
   
   // Leyenda
   ctx.fillStyle = '#fff';

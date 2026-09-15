@@ -5,10 +5,11 @@
 **PachaMirai** es un RPG táctico isométrico 2.5D para Android, inspirado en Waven (Ankama). Combina **exploración libre en mundo abierto** con **combate táctico por turnos** en cuadrícula isométrica.
 
 - **Plataforma:** Android (APK / PWA desde móvil)
-- **Estilo visual:** 2.5D isométrico, pixel art geométrico vibrante
+- **Estilo visual:** 2.5D isométrico con iluminación Waven-style (gradientes radiales, sombras internas, brillos)
 - **Perspectiva:** Cámara isométrica con zoom, centrada en el jugador
 - **Controles:** 100% táctiles
 - **Historia:** Sin narrativa profunda — foco en la **jugabilidad pura**
+- **Combate:** Pendiente de implementar
 
 ---
 
@@ -28,11 +29,69 @@ Mundo **completamente abierto** desde el inicio. Sin bloqueo de zonas por nivel,
 | **Volcán** | Calor extremo | -HP rápido | Equipo ignífugo |
 | **Castillo** | — | Zona final | Preparación completa |
 
-### Tamaño
+### Tamaño y Tiles
 
 - **Mundo:** 64×64 tiles (4096 celdas)
+- **Tamaño de tile:** 4×4 píxeles (4 celdas por tile para detalle fino)
 - **Biomas:** 7 zonas conectadas por caminos
-- **Render:** Frustum culling (solo lo visible)
+- **Render:** Frustum culling + Fog of War circular
+
+---
+
+## Estilo Visual (Waven-Style)
+
+### Iluminación
+
+- **Gradientes radiales:** Luz desde arriba-derecha
+- **Sombras internas:** Cada elemento tiene sombreado interno
+- **Brillos especulares:** Puntos de luz en superficies reflectantes
+- **Sombras proyectadas:** Todos los objetos proyectan sombra en el suelo
+
+### Sprites de Personajes
+
+- **Cuerpo:** Gradiente con sombra lateral
+- **Ropa/Armadura:** Capas con sombreado interno
+- **Cabeza:** Gradiente radial en cara, pelo con brillos
+- **Ojos:** Blancos con pupila + brillo especular
+- **Accesorios:** Cinturón, botas, hombreras con relieve
+
+### Sprites de NPCs
+
+- Único color identificador por tipo
+- Pelo personalizado (largo, corona, normal)
+- Indicador dorado de interacción arriba
+
+### Animales Reales (Enemigos Futuros)
+
+| Animal | Bioma | Comportamiento |
+|--------|-------|----------------|
+| **Lobo** | Bosque | Manada, medio agresivo |
+| **Oso** | Bosque/Montaña | Solo, muy agresivo |
+| **Ciervo** | Bosque | Huye, pasivo |
+| **Serpiente** | Desierto/Pantano | Emboscada, veneno |
+| **Águila** | Montaña | Vuelo, ataque aéreo |
+| **Jabalí** | Bosque/Pantano | Carga, agresivo |
+
+### Vegetación por Bioma
+
+| Bioma | Árboles | Flores | Hongos | Arbustos |
+|-------|---------|--------|--------|----------|
+| **Pueblo** | Roble | Margaritas | — | Setos |
+| **Bosque** | Pino, Roble | Violetas | Marrones | Zarzas |
+| **Desierto** | Palmera | Cactus | — | Secos |
+| **Montaña** | Pino negro | Edelweiss | — | Rododendros |
+| **Pantano** | Muerto | Lirios | Venenosos | Juncos |
+| **Volcán** | — | — | — | — |
+| **Castillo** | Ornamental | Rosas | — | Setos |
+
+### Estructuras
+
+- **Casas:** Paredes con sombra, techo con pendiente, chimenea
+- **Puente:** Madera con pilares, sombra bajo el arco
+- **Caminos:** Textura de tierra/piedra, sin césped
+- **Ríos:** Agua con ondas, orillas de tierra
+- **Pozos:** Piedra con sombra interior, cubierta
+- **Torres:** Piedra con ventanas, bandera arriba
 
 ---
 
@@ -40,114 +99,35 @@ Mundo **completamente abierto** desde el inicio. Sin bloqueo de zonas por nivel,
 
 ### Movimiento
 
-- **Control:** Tap en celda adyacente (8 direcciones: arriba/abajo/izq/der + diagonales)
+- **Control:** Tap en celda adyacente (8 direcciones + diagonales)
 - **Animación:** Caminata fluida (2 frames)
 - **Velocidad:** ~0.3 segundos por tile (lento, táctico, preciso)
-- **Colisiones:** No atraviesa agua, paredes, NPCs, cofres cerrados
-- **Diagonales:** Verifica que las celdas adyacentes estén libres (no atravesar esquinas)
+- **Colisiones:** No atraviesa agua, paredes, NPCs, cofres cerrados, estructuras
+- **Diagonales:** Verifica celdas adyacentes libres
 - **Snap:** Aterrizaje exacto en el centro de cada celda
 
-### Controles de Acción
+### Minimapa Dinámico
 
-- **Botón de Acción Contextual:**
-  - Si hay enemigo adyacente → **Atacar** (inicia combate)
-  - Si hay NPC adyacente → **Hablar** (abre diálogo)
-  - Si hay cofre adyacente → **Recoger** (abre cofre)
-- **Tap en celda:** Moverse (si está libre)
+- **Rotación libre:** Rota según la dirección del movimiento del jugador
+- **Fog of War circular:** Radio de 8 tiles alrededor del jugador
+- **Gradiente radial:** Bordes suaves (visible → invisible en 3 tiles)
+- **Contenido:** Biomas coloreados, jugador (amarillo), NPCs (cyan) en visión
+- **Tamaño:** 100×100 píxeles en esquina inferior derecha
 
-### Cámara
+### Fog of War (Mundo Principal)
 
-- **Sigue al jugador** con offset suave
-- **Clamp:** Nunca muestra fuera del mundo
-- **Mundo centrado** cuando es más chico que la pantalla
-- **Zoom:** Ajuste para combate
+- **Tipo:** Circular con distancia euclidiana
+- **Radio:** 8 tiles
+- **Transición:** Gradual en las últimas 3 tiles
+- **Contenido oculto:** Tiles, NPCs, cofres fuera del radio
+- **Fondo:** Negro puro (#000)
 
-### Interacciones
+### Dificultades Ambientales
 
-- **NPCs:** Tap para abrir diálogo
-- **Cofres:** Tap para abrir y recoger loot
-- **Estaciones:** Herrería, Alquimia, Encantamiento, Cocina, Runas
-- **Guardado:** Automático en zonas seguras + al moverse
-
----
-
-## Combate Táctico (Waven-Style)
-
-### Inicio del Combate
-
-1. Jugador toca botón "Atacar" con enemigo adyacente
-2. Transición a zona de combate delimitada
-3. Grid variable según zona (4×4, 5×5, 6×6)
-4. Aparecen aliados (mascotas/invocaciones) y enemigos
-5. Posicionamiento inicial en la cuadrícula
-
-### Sistema de Recursos (PM/PA)
-
-- **Puntos de Movimiento (PM):** 4-6 según build
-  - Mover 1 tile = 1 PM
-  - Dash = 2 PM (mueve 2 tiles)
-- **Puntos de Acción (PA):** 4-6 según build
-  - Habilidad básica = 2 PA
-  - Habilidad fuerte = 3-4 PA
-  - Defensa = 1 PA
-- **Iniciativa:** Por stats de agilidad
-- **Turnos:** Alternados jugador → enemigo → jugador
-
-### Habilidades (12+ activas)
-
-#### Categorías
-
-| Tipo | Ejemplo | Coste PA | Efecto |
-|------|---------|----------|--------|
-| **Ataque Cuerpo a Cuerpo** | Tajo Filoso | 2 | 3 daño, rango 1 |
-| **Ataque a Distancia** | Flecha Penetrante | 2 | 2 daño, rango 3 |
-| **Área** | Onda de Choque | 3 | 2 daño, área 1 |
-| **Dash** | Movimiento Rápido | 2 | Mueve 2 tiles gratis |
-| **Defensa** | Escudo Mágico | 1 | +3 defensa, 2 turnos |
-| **Buff** | Furia Interior | 2 | +50% ataque, 3 turnos |
-| **Debuff** | Grito de Miedo | 2 | Enemigo no ataca, 1 turno |
-| **Curación** | Toque Sanador | 3 | +6 HP |
-| **Invocación** | Invocar Lobo | 4 | Invoca unidad aliada |
-| **Línea** | Rayo Laser | 3 | 4 daño en línea recta |
-| **Salto** | Salto Heroico | 3 | Mueve 3 tiles + ataque |
-| **Veneno** | Flecha Venenosa | 2 | 1 daño + veneno 3 turnos |
-
-#### Mecánica de Habilidades
-
-- **Sin cooldowns:** Se usan con PM/PA
-- **Sin límite de usos:** Mientras tengas PA, podés usarlas
-- **Rango:** Cada habilidad tiene un alcance (1-4 tiles)
-- **Área:** Algunas afectan múltiples tiles
-- **Línea:** Atraviesa en línea recta
-- **Salto:** Permite moverse Y atacar en la misma acción
-
-### Invocaciones/Mascotas
-
-- **Obtención:** Crafting de invocaciones (estación de Invocación)
-- **Uso:** Se invocan en combate (ocupan 1 tile en el grid)
-- **Tipos:**
-  - **Familiar:** Equipado, da stats pasivos
-  - **Invocación activa:** Lucha en el grid
-- **Ejemplos:** Lobo, Halcón, Oso, Elemental, Golem, Dragón
-
-### IA Enemiga
-
-- **Básico:** Si jugador en rango → ataca
-- **Intermedio:** Usa habilidades, se posiciona
-- **Avanzado:** Flanqueo, cobertura, enfoque en débiles
-- **Jefe:** Patrones especiales, fases, invocaciones
-
-### Grid de Combate Variable
-
-| Zona | Tamaño Grid | Enemigos | Complejidad |
-|------|-------------|----------|-------------|
-| Pueblo | 4×4 | 1-2 | Tutorial |
-| Bosque | 4×4 | 2-3 | Baja |
-| Desierto | 5×5 | 2-4 | Media |
-| Montaña | 5×5 | 3-4 | Media |
-| Pantano | 5×5 | 3-5 | Alta |
-| Volcán | 6×6 | 4-6 | Alta |
-| Castillo | 6×6 | 5-8 | Épica |
+- **Daño progresivo:** Sin protección → pierdes HP gradualmente
+- **Reducción de stats:** Sin equipo → menos velocidad, ataque, defensa
+- **Consumibles:** Agua, antídotos, pociones de resistencia
+- **Equipo especial:** Abrigo para frío, armadura ignífuga para calor
 
 ---
 
@@ -155,12 +135,11 @@ Mundo **completamente abierto** desde el inicio. Sin bloqueo de zonas por nivel,
 
 ### Experiencia
 
-Se obtiene de:
-- ✅ Vencer enemigos
-- ✅ Explorar zonas nuevas
-- ✅ Encontrar objetos ocultos
-- ✅ Completar misiones de NPCs
-- ✅ Abrir cofres
+- Vencer enemigos
+- Explorar zonas nuevas
+- Encontrar objetos ocultos
+- Completar misiones de NPCs
+- Abrir cofres
 
 ### Atributos
 
@@ -170,83 +149,64 @@ Se obtiene de:
 
 ### Equipo
 
-El equipo se obtiene de **todas las formas**:
-- 🛒 Tiendas (comprar con oro)
-- 🗝️ Cofres (exploración)
-- ⚒️ Crafting (fabricar con materiales)
-- 🎁 Recompensas (misiones)
-
-#### Slots de Equipo
-
-| Slot | Efecto |
-|------|--------|
-| Arma | Daño base, alcance, tipo |
-| Armadura | Defensa, resistencia ambiental |
-| Casco | Defensa mágica, visión |
-| Botas | Movimiento, evasión |
-| Accesorio 1 | Stat especial |
-| Accesorio 2 | Stat especial |
-| Mascota | Stats pasivos |
+- **Obtención:** Tiendas, cofres, crafting, recompensas
+- **Slots:** Arma, Armadura, Casco, Botas, 2 Accesorios, Mascota
 
 ### Estaciones de Crafting
 
-| Estación | Función |
-|----------|---------|
-| **Herrería** | Armas y armaduras metálicas |
-| **Alquimia** | Pociones, antídotos, consumibles |
-| **Encantamiento** | Mejorar equipo existente |
-| **Cocina** | Comida (curación, buffs) |
-| **Runas** | Modificadores de habilidades |
-| **Invocación** | Crear invocaciones (crafting) |
+- **Herrería:** Armas y armaduras metálicas
+- **Alquimia:** Pociones, antídotos, consumibles
+- **Encantamiento:** Mejorar equipo
+- **Cocina:** Comida (curación, buffs)
+- **Runas:** Modificadores de habilidades
+- **Invocación:** Crear invocaciones
 
 ---
 
-## Controles Táctiles (100% Touch)
+## Controles Táctiles
 
 ### Exploración
 
 ```
-┌─────────────────────────────────┐
-│         EXPLORACIÓN             │
-│                                 │
-│    🌲🌲🌲🌲🌲🌲🌲               │
-│    🌲 👹 🌲    🌲              │
-│    🌲🌲 🧙 🌲🌲🌲              │
-│    🌲🌲🌲🏠🌲🌲🌲              │
-│    🌲💧🌲🌲🌲🌲🌲              │
-│                                 │
-│ [HP] [Sed] [Temp] [Mini-mapa]  │
-│                                 │
-│  Tap celda = Mover (8 dir)     │
-│  Botón ⚔️ = Atacar/Hablar/Recoger│
-└─────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│         EXPLORACIÓN                     │
+│                                         │
+│    🌲🌲🌲🌲🌲🌲🌲                       │
+│    🌲 🐺 🌲    🌲                      │
+│    🌲🌲 👤 🌲🌲🌲                      │
+│    🌲🌲🌲🏠🌲🌲🌲                      │
+│    🌲💧🌲🌲🌲🌲🌲                      │
+│                                         │
+│ [HP] [Sed] [Temp] [🗺️ Minimapa]       │
+│                                         │
+│  Tap celda adyacente = Mover (8 dir)   │
+└─────────────────────────────────────────┘
 ```
 
-### Combate
+---
 
-```
-┌─────────────────────────────────┐
-│         COMBATE                 │
-│                                 │
-│  ┌───┬───┬───┬───┬───┐         │
-│  │   │   │👹│   │   │         │
-│  ├───┼───┼───┼───┼───┤         │
-│  │   │🧙│   │   │   │         │
-│  ├───┼───┼───┼───┼───┤         │
-│  │   │🐺│   │👹│   │         │
-│  ├───┼───┼───┼───┼───┤         │
-│  │   │   │   │   │   │         │
-│  └───┴───┴───┴───┴───┘         │
-│                                 │
-│ PM:4/4 │ PA:6/6 │ HP:100/100   │
-│                                 │
-│ [Habilidad 1] [Habilidad 2]    │
-│ [Habilidad 3] [Habilidad 4]    │
-│ [Mover] [Defensa] [Fin Turno]  │
-│                                 │
-│  Tap habilidad + tap objetivo  │
-└─────────────────────────────────┘
-```
+## Especificaciones Técnicas
+
+### Motor
+
+- **Render:** Canvas 2D (vanilla JS, sin dependencias)
+- **Proyección:** Isométrica 2D
+- **Estructura:** Modular (dev/ → build.sh → index.html)
+- **Sin servidor:** 100% client-side (GitHub Pages)
+- **Carga:** < 2 segundos
+
+### Rendimiento
+
+- **Objetivo:** 60 FPS en Android medio
+- **Draw calls:** Frustum culling + solo tiles visibles
+- **Memoria:** < 100MB RAM
+
+### Resolución
+
+- **Mundo:** 64×64 tiles (4096 celdas)
+- **Tiles visibles:** ~20×20 en pantalla
+- **Pantalla:** Adaptativa (cualquier resolución Android)
+- **Tamaño tile:** 4×4 celdas (detalle fino)
 
 ---
 
@@ -254,24 +214,13 @@ El equipo se obtiene de **todas las formas**:
 
 1. **Mundo abierto real** — Sin linealidad, el jugador elige su camino
 2. **Dificultades ambientales** — Frío, calor, sed como mecánica real
-3. **Árbol de talentos profundo** — Sin clases, el rol lo defines vos
-4. **Combate táctico con profundidad** — PM/PA/posicionamiento Waven-style
-5. **Crafting completo** — Fabricar equipo, mejorar, encantar, invocar
-6. **Elección de encuentros** — Enemigos visibles, vos decidís si luchás
-7. **12+ habilidades activas** — Variedad y personalización
-8. **100% funcional en móvil** — Sin PC, sin servidor, sin dependencias
-
----
-
-## Especificaciones Técnicas
-
-- **Render:** Canvas 2D (vanilla JS)
-- **Proyección:** Isométrica 2D
-- **Archivo único:** index.html
-- **Sin servidor:** 100% client-side (GitHub Pages)
-- **Sprites:** Formas geométricas procedimentales
-- **Sin emojis:** No renderizan bien en Android
-- **Objetivo:** 60 FPS en Android medio
+3. **Fog of War circular** — Exploración con descubrimiento gradual
+4. **Minimapa dinámico** — Rota con la dirección del jugador
+5. **Iluminación Waven-style** — Gradientes, sombras, brillos
+6. **Animales reales** — Enemigos basados en fauna real
+7. **Vegetación variada** — Diferentes tipos por bioma
+8. **Estructuras con sombra** — Casas, puentes, torres, pozos
+9. **100% funcional en móvil** — Sin PC, sin servidor, sin dependencias
 
 ---
 
@@ -279,8 +228,8 @@ El equipo se obtiene de **todas las formas**:
 
 ### Fase 1: Core ✅
 - [x] Motor isométrico
-- [x] Mundo 16×16 con bioma
-- [x] Movimiento de jugador (tap, snap exacto)
+- [x] Mundo básico
+- [x] Movimiento con tap (8 direcciones)
 - [x] Cámara que sigue al jugador
 - [x] Colisiones
 
@@ -289,29 +238,34 @@ El equipo se obtiene de **todas las formas**:
 - [x] Dificultades ambientales
 - [x] NPCs con diálogos
 - [x] Cofres coleccionables
-- [x] Minimapa
-- [x] Guardado/carga
-- [x] Movimiento 8 direcciones
-- [x] Velocidad lenta (0.3s)
+- [x] Minimapa con Fog of War
+- [x] Guardado/carga LocalStorage
+- [x] Tiles 4×4 para detalle
 
-### Fase 3: Combate (Próxima)
-- [ ] Botón de acción contextual (atacar/hablar/recoger)
+### Fase 2.5: Polish Visual (En progreso)
+- [ ] Minimapa dinámico con rotación
+- [ ] Personajes con iluminación Waven-style
+- [ ] NPCs detallados
+- [ ] Animales reales como enemigos
+- [ ] Vegetación variada por bioma
+- [ ] Estructuras con sombras (casas, puentes, etc.)
+
+### Fase 3: Combate (Pendiente)
+- [ ] Botón de acción contextual
 - [ ] Sistema de turnos (PM/PA)
-- [ ] Grid de combate variable (4×4 a 6×6)
-- [ ] 12+ habilidades activas
-- [ ] Invocaciones (crafting)
+- [ ] Grid de combate variable
+- [ ] Habilidades
 - [ ] IA enemiga
-- [ ] Transición exploración ↔ combate
 
 ### Fase 4: Progresión
-- [ ] Árbol de talentos completo
+- [ ] Árbol de talentos
 - [ ] Sistema de niveles y stats
 - [ ] Equipo y loot
 - [ ] Estaciones de crafting
 - [ ] Misiones de NPCs
 
 ### Fase 5: Contenido
-- [ ] 20+ tipos de enemigos
+- [ ] 20+ tipos de enemigos animales
 - [ ] 7 jefes de zona
 - [ ] Balanceo
 - [ ] Partículas y efectos
@@ -319,4 +273,4 @@ El equipo se obtiene de **todas las formas**:
 
 ---
 
-*Versión 3.0 — Mecánicas definidas para Fase 3*
+*Versión 4.0 — Incluye estilo visual Waven, animales reales, minimapa dinámico*
