@@ -5,10 +5,10 @@
 **PachaMirai** es un RPG táctico isométrico 2.5D para Android, inspirado en Waven (Ankama). Combina **exploración libre en mundo abierto** con **combate táctico por turnos** en cuadrícula isométrica.
 
 - **Plataforma:** Android (APK / PWA desde móvil)
-- **Estilo visual:** 2.5D isométrico, pixel art geométrico vibrante (como Waven/Dofus)
+- **Estilo visual:** 2.5D isométrico, pixel art geométrico vibrante
 - **Perspectiva:** Cámara isométrica con zoom, centrada en el jugador
-- **Controles:** 100% táctiles (sin teclado)
-- **Historia:** Sin narrativa profunda — el foco es la **jugabilidad pura**
+- **Controles:** 100% táctiles
+- **Historia:** Sin narrativa profunda — foco en la **jugabilidad pura**
 
 ---
 
@@ -16,120 +16,138 @@
 
 ### Filosofía
 
-El mundo es **completamente abierto** desde el inicio. No hay bloqueo de zonas por nivel, pero cada bioma tiene **dificultades ambientales** que desafían al jugador:
+Mundo **completamente abierto** desde el inicio. Sin bloqueo de zonas por nivel, pero cada bioma tiene **dificultades ambientales**:
 
-| Bioma | Dificultad Ambiental | Requisito |
-|-------|---------------------|-----------|
-| **Pueblo Inicial** | Ninguna | Zona segura |
-| **Bosque Verde** | Ninguna | — |
-| **Desierto Árido** | Sed progresiva | Hidratación (cantimplora, agua) |
-| **Montaña Helada** | Frío progresivo | Abrigo, hogueras |
-| **Pantano Oscuro** | Veneno/Enfermedad | Antídotos, equipo resistente |
-| **Volcán** | Calor extremo | Equipo ignífugo, pociones de fuego |
-| **Castillo del Rey** | Zona final | Preparación completa |
+| Bioma | Dificultad | Efecto | Requisito |
+|-------|-----------|--------|-----------|
+| **Pueblo** | Ninguna | — | Zona segura |
+| **Bosque** | Ninguna | — | — |
+| **Desierto** | Sed progresiva | -HP si sed=0 | Hidratación |
+| **Montaña** | Frío progresivo | -HP si temp=0 | Abrigo |
+| **Pantano** | Veneno | -HP aleatorio | Antídotos |
+| **Volcán** | Calor extremo | -HP rápido | Equipo ignífugo |
+| **Castillo** | — | Zona final | Preparación completa |
 
-### Dificultades Ambientales
+### Tamaño
 
-- **Daño progresivo:** Sin protección → pierdes HP gradualmente
-- **Reducción de stats:** Sin equipo → menos velocidad, ataque, defensa
-- **Consumibles:** Agua, antídotos, pociones de resistencia
-- **Equipo especial:** Abrigo para frío, armadura ignífuga para calor
-- **Estrategia:** El jugador debe prepararse antes de explorar zonas hostiles
-
-### Tamaño y Rendimiento
-
-- **Mundo total:** 64×64 tiles (4096 celdas)
+- **Mundo:** 64×64 tiles (4096 celdas)
 - **Biomas:** 7 zonas conectadas por caminos
 - **Render:** Frustum culling (solo lo visible)
-- **Cámara:** Siempre centrada, nunca muestra fuera del mundo
 
 ---
 
-## Exploración Libre
+## Exploración
 
 ### Movimiento
 
-- **Control:** Tap en celda adyacente → mueve 1 tile
-- **Animación:** Caminata fluida (2 frames de piernas)
-- **Velocidad:** ~0.2 segundos por tile
-- **Colisiones:** No atraviesa agua, paredes, enemigos
-- **Precisión:** Snap exacto al centro de cada celda
+- **Control:** Tap en celda adyacente (8 direcciones: arriba/abajo/izq/der + diagonales)
+- **Animación:** Caminata fluida (2 frames)
+- **Velocidad:** ~0.3 segundos por tile (lento, táctico, preciso)
+- **Colisiones:** No atraviesa agua, paredes, NPCs, cofres cerrados
+- **Diagonales:** Verifica que las celdas adyacentes estén libres (no atravesar esquinas)
+- **Snap:** Aterrizaje exacto en el centro de cada celda
 
-### Enemigos en el Mundo
+### Controles de Acción
 
-- **Visibles:** Se ven caminando por el mapa
-- **Elección:** El jugador decide si luchar o evitar
-- **Encuentros:** No aleatorios — están fijos en el mapa
-- **Agresividad:** Algunos persiguen al jugador, otros son pasivos
+- **Botón de Acción Contextual:**
+  - Si hay enemigo adyacente → **Atacar** (inicia combate)
+  - Si hay NPC adyacente → **Hablar** (abre diálogo)
+  - Si hay cofre adyacente → **Recoger** (abre cofre)
+- **Tap en celda:** Moverse (si está libre)
+
+### Cámara
+
+- **Sigue al jugador** con offset suave
+- **Clamp:** Nunca muestra fuera del mundo
+- **Mundo centrado** cuando es más chico que la pantalla
+- **Zoom:** Ajuste para combate
 
 ### Interacciones
 
 - **NPCs:** Tap para abrir diálogo
-- **Cofres:** Tap para abrir y recibir loot
-- **Zonas de combate:** Entrar en radio de enemigo → inicia combate
-- **Estaciones de crafting:** Herrería, alquimia, cocina, encantamiento
-- **Guardado:** Automático en zonas seguras
+- **Cofres:** Tap para abrir y recoger loot
+- **Estaciones:** Herrería, Alquimia, Encantamiento, Cocina, Runas
+- **Guardado:** Automático en zonas seguras + al moverse
 
 ---
 
-## Combate Táctico (Estilo Waven)
+## Combate Táctico (Waven-Style)
 
 ### Inicio del Combate
 
-1. El jugador entra en el radio de un enemigo
-2. La cámara se ajusta a la **zona de combate** (5×5 tiles)
-3. Aparecen aliados (mascotas/invocaciones) y enemigos
-4. Todos se posicionan en la cuadrícula isométrica
+1. Jugador toca botón "Atacar" con enemigo adyacente
+2. Transición a zona de combate delimitada
+3. Grid variable según zona (4×4, 5×5, 6×6)
+4. Aparecen aliados (mascotas/invocaciones) y enemigos
+5. Posicionamiento inicial en la cuadrícula
 
-### Mecánicas por Turno
+### Sistema de Recursos (PM/PA)
 
 - **Puntos de Movimiento (PM):** 4-6 según build
+  - Mover 1 tile = 1 PM
+  - Dash = 2 PM (mueve 2 tiles)
 - **Puntos de Acción (PA):** 4-6 según build
+  - Habilidad básica = 2 PA
+  - Habilidad fuerte = 3-4 PA
+  - Defensa = 1 PA
 - **Iniciativa:** Por stats de agilidad
-- **Turnos alternados:** Jugador → Enemigo → Jugador...
+- **Turnos:** Alternados jugador → enemigo → jugador
 
-### Sistema de Habilidades (No Hechizos)
+### Habilidades (12+ activas)
 
-En vez de hechizos elementales clásicos, el jugador tiene **habilidades activas** aprendidas en el **árbol de talentos**:
+#### Categorías
 
-#### Categorías de Habilidades
+| Tipo | Ejemplo | Coste PA | Efecto |
+|------|---------|----------|--------|
+| **Ataque Cuerpo a Cuerpo** | Tajo Filoso | 2 | 3 daño, rango 1 |
+| **Ataque a Distancia** | Flecha Penetrante | 2 | 2 daño, rango 3 |
+| **Área** | Onda de Choque | 3 | 2 daño, área 1 |
+| **Dash** | Movimiento Rápido | 2 | Mueve 2 tiles gratis |
+| **Defensa** | Escudo Mágico | 1 | +3 defensa, 2 turnos |
+| **Buff** | Furia Interior | 2 | +50% ataque, 3 turnos |
+| **Debuff** | Grito de Miedo | 2 | Enemigo no ataca, 1 turno |
+| **Curación** | Toque Sanador | 3 | +6 HP |
+| **Invocación** | Invocar Lobo | 4 | Invoca unidad aliada |
+| **Línea** | Rayo Laser | 3 | 4 daño en línea recta |
+| **Salto** | Salto Heroico | 3 | Mueve 3 tiles + ataque |
+| **Veneno** | Flecha Venenosa | 2 | 1 daño + veneno 3 turnos |
 
-| Tipo | Ejemplo | Efecto |
-|------|---------|--------|
-| **Ataque** | Tajo Filoso | 3 daño cuerpo a cuerpo |
-| **Ataque a distancia** | Flecha Penetrante | 2 daño, alcance 3 tiles |
-| **Área** | Onda de Choque | 2 daño en área 1 |
-| **Movimiento** | Dash | Mueve 2 tiles gratis |
-| **Defensa** | Escudo Mágico | +3 defensa 2 turnos |
-| **Buff** | Furia | +50% ataque 3 turnos |
-| **Debuff** | Miedo | Enemigo no ataca 1 turno |
-| **Curación** | Toque Sanador | +6 HP |
-| **Invocación** | Invocar Lobo | Invoca unidad aliada |
+#### Mecánica de Habilidades
 
-#### Árbol de Talentos
-
-- **Profundidad:** Muchas ramas, especialización flexible
-- **3 ramas principales:**
-  - **Poder:** Daño, crítico, área
-  - **Supervivencia:** Vida, defensa, curación
-  - **Soporte:** Buffs, invocaciones, control
-- **Sin clase fija:** El árbol define el rol del personaje
-- **Reespecializable:** Se puede cambiar en zonas seguras (con coste)
+- **Sin cooldowns:** Se usan con PM/PA
+- **Sin límite de usos:** Mientras tengas PA, podés usarlas
+- **Rango:** Cada habilidad tiene un alcance (1-4 tiles)
+- **Área:** Algunas afectan múltiples tiles
+- **Línea:** Atraviesa en línea recta
+- **Salto:** Permite moverse Y atacar en la misma acción
 
 ### Invocaciones/Mascotas
 
-- **Obtención:** Combate, misiones, equipamiento, invocación en combate
+- **Obtención:** Crafting de invocaciones (estación de Invocación)
+- **Uso:** Se invocan en combate (ocupan 1 tile en el grid)
 - **Tipos:**
-  - **Familiar pasivo:** Equipado, da stats pasivos
-  - **Invocación activa:** En combate, ocupa un tile
-- **Ejemplos:** Lobo, Halcón, Oso, Elemental, Golem
+  - **Familiar:** Equipado, da stats pasivos
+  - **Invocación activa:** Lucha en el grid
+- **Ejemplos:** Lobo, Halcón, Oso, Elemental, Golem, Dragón
 
 ### IA Enemiga
 
 - **Básico:** Si jugador en rango → ataca
 - **Intermedio:** Usa habilidades, se posiciona
-- **Avanzado:** Flanqueo, uso de cobertura, enfoque en débiles
+- **Avanzado:** Flanqueo, cobertura, enfoque en débiles
 - **Jefe:** Patrones especiales, fases, invocaciones
+
+### Grid de Combate Variable
+
+| Zona | Tamaño Grid | Enemigos | Complejidad |
+|------|-------------|----------|-------------|
+| Pueblo | 4×4 | 1-2 | Tutorial |
+| Bosque | 4×4 | 2-3 | Baja |
+| Desierto | 5×5 | 2-4 | Media |
+| Montaña | 5×5 | 3-4 | Media |
+| Pantano | 5×5 | 3-5 | Alta |
+| Volcán | 6×6 | 4-6 | Alta |
+| Castillo | 6×6 | 5-8 | Épica |
 
 ---
 
@@ -148,25 +166,25 @@ Se obtiene de:
 
 - **Nivel:** 1-30
 - **Atributos base:** Fuerza, Agilidad, Inteligencia, Constitución
-- **Derivados:** HP, Mana, PM, PA, Daño, Defensa, Crítico
+- **Derivados:** HP, Mana, PM, PA, Daño, Defensa, Crítico, Iniciativa
 
-### Equipo y Loot
+### Equipo
 
 El equipo se obtiene de **todas las formas**:
-- 🛒 **Tiendas:** Comprar con oro
-- 🗝️ **Cofres:** Encontrar explorando
-- ⚒️ **Crafting:** Fabricar con materiales
-- 🎁 **Recompensas:** Misiones, exploración
+- 🛒 Tiendas (comprar con oro)
+- 🗝️ Cofres (exploración)
+- ⚒️ Crafting (fabricar con materiales)
+- 🎁 Recompensas (misiones)
 
-#### Tipos de Equipo
+#### Slots de Equipo
 
 | Slot | Efecto |
 |------|--------|
-| Arma | Daño base, alcance, tipo de ataque |
+| Arma | Daño base, alcance, tipo |
 | Armadura | Defensa, resistencia ambiental |
 | Casco | Defensa mágica, visión |
 | Botas | Movimiento, evasión |
-| Accesorio 1 | Stat especial (crítico, robo de vida, etc.) |
+| Accesorio 1 | Stat especial |
 | Accesorio 2 | Stat especial |
 | Mascota | Stats pasivos |
 
@@ -177,8 +195,9 @@ El equipo se obtiene de **todas las formas**:
 | **Herrería** | Armas y armaduras metálicas |
 | **Alquimia** | Pociones, antídotos, consumibles |
 | **Encantamiento** | Mejorar equipo existente |
-| **Cocina** | Comida (curación, buffs temporales) |
+| **Cocina** | Comida (curación, buffs) |
 | **Runas** | Modificadores de habilidades |
+| **Invocación** | Crear invocaciones (crafting) |
 
 ---
 
@@ -191,14 +210,15 @@ El equipo se obtiene de **todas las formas**:
 │         EXPLORACIÓN             │
 │                                 │
 │    🌲🌲🌲🌲🌲🌲🌲               │
-│    🌲 🕷️ 🌲    🌲  ← Enemigo    │
-│    🌲🌲 🧙 🌲🌲🌲  ← Jugador     │
-│    🌲🌲🌲🏠🌲🌲🌲  ← NPC         │
-│    🌲💧🌲🌲🌲🌲🌲  ← Agua/sed    │
+│    🌲 👹 🌲    🌲              │
+│    🌲🌲 🧙 🌲🌲🌲              │
+│    🌲🌲🌲🏠🌲🌲🌲              │
+│    🌲💧🌲🌲🌲🌲🌲              │
 │                                 │
 │ [HP] [Sed] [Temp] [Mini-mapa]  │
 │                                 │
-│  Tap celda adyacente = Mover   │
+│  Tap celda = Mover (8 dir)     │
+│  Botón ⚔️ = Atacar/Hablar/Recoger│
 └─────────────────────────────────┘
 ```
 
@@ -206,7 +226,7 @@ El equipo se obtiene de **todas las formas**:
 
 ```
 ┌─────────────────────────────────┐
-│         COMBATE 5×5             │
+│         COMBATE                 │
 │                                 │
 │  ┌───┬───┬───┬───┬───┐         │
 │  │   │   │👹│   │   │         │
@@ -220,38 +240,13 @@ El equipo se obtiene de **todas las formas**:
 │                                 │
 │ PM:4/4 │ PA:6/6 │ HP:100/100   │
 │                                 │
-│ [Mover] [Habilidades] [Fin]    │
+│ [Habilidad 1] [Habilidad 2]    │
+│ [Habilidad 3] [Habilidad 4]    │
+│ [Mover] [Defensa] [Fin Turno]  │
 │                                 │
-│  Tap celda = Mover              │
-│  Tap enemoso + habilidad = Atk  │
+│  Tap habilidad + tap objetivo  │
 └─────────────────────────────────┘
 ```
-
----
-
-## Especificaciones Técnicas
-
-### Motor
-
-- **Render:** Canvas 2D (vanilla JS, sin dependencias)
-- **Proyección:** Isométrica 2D (no WebGL)
-- **Archivo único:** index.html
-- **Sin servidor:** 100% client-side (GitHub Pages)
-- **Sin npm/build:** Código directo
-
-### Assets
-
-- **Sprites:** Formas geométricas procedimentales (no imágenes)
-- **Colores:** Paleta vibrante con degradados y sombras
-- **UI:** Botones redondeados, barras con gradientes
-- **Sin emojis:** No renderizan bien en Android
-
-### Rendimiento
-
-- **Objetivo:** 60 FPS en Android medio
-- **Draw calls:** Mínimos (batch de tiles)
-- **Memoria:** < 100MB RAM
-- **Carga:** < 2 segundos
 
 ---
 
@@ -261,49 +256,67 @@ El equipo se obtiene de **todas las formas**:
 2. **Dificultades ambientales** — Frío, calor, sed como mecánica real
 3. **Árbol de talentos profundo** — Sin clases, el rol lo defines vos
 4. **Combate táctico con profundidad** — PM/PA/posicionamiento Waven-style
-5. **Crafting completo** — Fabricar equipo, mejorar, encantar
+5. **Crafting completo** — Fabricar equipo, mejorar, encantar, invocar
 6. **Elección de encuentros** — Enemigos visibles, vos decidís si luchás
-7. **100% funcional en móvil** — Sin PC, sin servidor, sin dependencias
+7. **12+ habilidades activas** — Variedad y personalización
+8. **100% funcional en móvil** — Sin PC, sin servidor, sin dependencias
 
 ---
 
-## Roadmap de Desarrollo
+## Especificaciones Técnicas
 
-### Fase 1: Core (Semana 1-2)
-- [ ] Motor de render isométrico
-- [ ] Mundo 16×16 con 1 bioma
-- [ ] Movimiento de jugador (tap, snap exacto)
-- [ ] Cámara que sigue al jugador
-- [ ] Colisiones básicas
+- **Render:** Canvas 2D (vanilla JS)
+- **Proyección:** Isométrica 2D
+- **Archivo único:** index.html
+- **Sin servidor:** 100% client-side (GitHub Pages)
+- **Sprites:** Formas geométricas procedimentales
+- **Sin emojis:** No renderizan bien en Android
+- **Objetivo:** 60 FPS en Android medio
 
-### Fase 2: Mundo (Semana 3-4)
-- [ ] Mundo completo 64×64 con 7 biomas
-- [ ] Dificultades ambientales (frío, calor, sed)
-- [ ] NPCs y cofres
-- [ ] Minimapa y brújula
-- [ ] Sistema de guardado
+---
 
-### Fase 3: Combate (Semana 5-7)
-- [ ] Zona de combate delimitada
+## Roadmap
+
+### Fase 1: Core ✅
+- [x] Motor isométrico
+- [x] Mundo 16×16 con bioma
+- [x] Movimiento de jugador (tap, snap exacto)
+- [x] Cámara que sigue al jugador
+- [x] Colisiones
+
+### Fase 2: Mundo ✅
+- [x] Mundo 64×64 con 7 biomas
+- [x] Dificultades ambientales
+- [x] NPCs con diálogos
+- [x] Cofres coleccionables
+- [x] Minimapa
+- [x] Guardado/carga
+- [x] Movimiento 8 direcciones
+- [x] Velocidad lenta (0.3s)
+
+### Fase 3: Combate (Próxima)
+- [ ] Botón de acción contextual (atacar/hablar/recoger)
 - [ ] Sistema de turnos (PM/PA)
-- [ ] Habilidades básicas
-- [ ] Invocaciones/mascotas
+- [ ] Grid de combate variable (4×4 a 6×6)
+- [ ] 12+ habilidades activas
+- [ ] Invocaciones (crafting)
 - [ ] IA enemiga
+- [ ] Transición exploración ↔ combate
 
-### Fase 4: Progresión (Semana 8-10)
+### Fase 4: Progresión
 - [ ] Árbol de talentos completo
 - [ ] Sistema de niveles y stats
 - [ ] Equipo y loot
 - [ ] Estaciones de crafting
 - [ ] Misiones de NPCs
 
-### Fase 5: Contenido (Semana 11-12)
+### Fase 5: Contenido
 - [ ] 20+ tipos de enemigos
 - [ ] 7 jefes de zona
-- [ ] Balanceo de dificultad
+- [ ] Balanceo
 - [ ] Partículas y efectos
 - [ ] PWA para instalar
 
 ---
 
-*Versión 2.0 — Concepto completo basado en cuestionario*
+*Versión 3.0 — Mecánicas definidas para Fase 3*
