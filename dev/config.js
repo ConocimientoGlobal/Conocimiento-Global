@@ -9,14 +9,14 @@ let W, H;
 let TW, TH;
 
 // Campo de visión (en tiles)
-const VISION_RADIO = 8;
+const VISION_RADIO = 10;
 
 function calcularTileSize() {
   const c = document.getElementById('c');
   const ctx = c.getContext('2d');
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
-  // Tiles tamaño balanceado
+  // Tiles grandes y visibles
   const TILE = Math.min(W, H) / 8;
   TW = TILE;
   TH = TILE / 2;
