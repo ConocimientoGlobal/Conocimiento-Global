@@ -1,5 +1,5 @@
 // ============================================================================
-// RENDER - Con mar, vegetación detallada y texturas pixel art
+// RENDER - Usando elementos específicos por bioma
 // ============================================================================
 
 let ctx;
@@ -159,8 +159,20 @@ function renderMundo() {
       
       if (tile === 1) {
         const biomaId = getBioma(x, y);
-        if (biomaId === 2 || biomaId === 4 || biomaId === 5) {
+        if (biomaId === 2 || biomaId === 4) {
           drawMar(sx, sy, TW, TH, x, y);
+        } else if (biomaId === 5) {
+          // Lava
+          ctx.fillStyle = '#d84315';
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + TW/2, sy + TH/2);
+          ctx.lineTo(sx, sy + TH);
+          ctx.lineTo(sx - TW/2, sy + TH/2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#ffcc02';
+          ctx.fillRect(sx - 4, sy + TH/3, 8, 2);
         } else {
           drawAguaDulce(sx, sy, TW, TH, x, y);
         }
@@ -177,7 +189,7 @@ function renderMundo() {
     }
   }
   
-  // Decoraciones con más detalle
+  // Decoraciones con elementos específicos por bioma
   for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
     for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
       const dx = x - pgx;
@@ -194,38 +206,8 @@ function renderMundo() {
       const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
       const tipo = v % 100;
       
-      if (tipo < 8) {
-        let tipoArbol = 'roble';
-        switch(biomaId) {
-          case 1: tipoArbol = v % 3 === 0 ? 'pino' : (v % 3 === 1 ? 'roble' : 'abedul'); break;
-          case 2: tipoArbol = 'palmera'; break;
-          case 3: tipoArbol = 'pino'; break;
-          case 4: tipoArbol = v % 3 === 0 ? 'muerto' : 'roble'; break;
-          case 5: tipoArbol = 'muerto'; break;
-          default: tipoArbol = v % 2 === 0 ? 'roble' : 'abedul'; break;
-        }
-        drawArbolAlto(px, py, tipoArbol);
-      } else if (tipo < 12) {
-        drawRocaGrande(px, py);
-      } else if (tipo < 14 && biomaId === 0) {
-        drawCasaGrande(px, py);
-        drawHumo(px + 10, py - 38);
-      } else if (tipo < 15 && biomaId === 0) {
-        drawFuenteGrande(px, py);
-      } else if (tipo < 17) {
-        let colorFlor = '#fff';
-        switch(biomaId) {
-          case 0: colorFlor = v % 2 === 0 ? '#fff' : '#ffeb3b'; break;
-          case 1: colorFlor = v % 2 === 0 ? '#9c27b0' : '#fff'; break;
-          case 2: colorFlor = '#ff9800'; break;
-          default: colorFlor = '#fff'; break;
-        }
-        drawFlorSilvestre(px, py, colorFlor);
-      } else if (tipo < 19) {
-        const colorHongo = v % 2 === 0 ? '#8d6e63' : (v % 3 === 0 ? '#4caf50' : '#2196f3');
-        drawHongoColorido(px, py, colorHongo);
-      } else if (tipo < 22) {
-        drawArbustoGrande(px, py, v % 2 === 0 ? '#388e3c' : '#2e7d32');
+      if (tipo < 10) {
+        drawElementoBioma(px, py, biomaId, v);
       }
     }
   }
@@ -235,9 +217,7 @@ function renderMundo() {
     for (let y = Math.max(0, pgy - VISION_RADIO); y < Math.min(WORLD_H, pgy + VISION_RADIO); y++) {
       for (let x = Math.max(0, pgx - VISION_RADIO); x < Math.min(WORLD_W, pgx + VISION_RADIO); x++) {
         const s = iso(x, y);
-        const px = s.x + cam.x;
-        const py = s.y + cam.y;
-        drawNiebla(px, py, TW, TH, 0.5);
+        drawNiebla(s.x + cam.x, s.y + cam.y, TW, TH, 0.5);
       }
     }
   }
