@@ -7,7 +7,7 @@ const BIOMAS = [
   {id:1, nombre:'Bosque',     color1:'#2e7d32', color2:'#1b5e20', dificultad:null,      tipoAgua:'dulce'},
   {id:2, nombre:'Desierto',   color1:'#f9a825', color2:'#f57f17', dificultad:'sed',     tipoAgua:'mar'},
   {id:3, nombre:'Montaña',    color1:'#9e9e9e', color2:'#757575', dificultad:'frio',    tipoAgua:'dulce'},
-  {id:4, nombre:'Pantano',    color1:'#5d4037', color2:'#4e342e', dificultad:'veneno',  tipoAgua:'mar'},
+  {id:4,nombre:'Pantano',color1:'#5d4037',color2:'#4e342e',dificultad:'veneno',tipoAgua:'mar'},
   {id:5, nombre:'Volcan',     color1:'#d84315', color2:'#bf360c', dificultad:'calor',   tipoAgua:'lava'},
   {id:6, nombre:'Castillo',   color1:'#37474f', color2:'#263238', dificultad:null,      tipoAgua:'dulce'}
 ];

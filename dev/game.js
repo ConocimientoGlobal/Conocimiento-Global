@@ -1,14 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>PachaMirai</title>
-<style>*{margin:0;padding:0;background:#000;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden}canvas{display:block;position:fixed;top:0;left:0}</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<script>
 // ============================================================================
 // CONFIGURACIÓN
 // ============================================================================
@@ -585,6 +574,3 @@ c.addEventListener('touchstart', e => {
 }, {passive: false});
 
 loop();
-</script>
-</body>
-</html>
