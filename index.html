@@ -32,20 +32,18 @@ const TW = TILE, TH = TILE / 2;
 // BIOMAS
 // ============================================================================
 const BIOMAS = [
-  {id:0, nombre:'Pueblo',     color1:'#4caf50', color2:'#388e3c', dificultad:null,      enemyRate:0},
-  {id:1, nombre:'Bosque',     color1:'#2e7d32', color2:'#1b5e20', dificultad:null,      enemyRate:0.05},
-  {id:2, nombre:'Desierto',   color1:'#f9a825', color2:'#f57f17', dificultad:'sed',     enemyRate:0.08},
-  {id:3, nombre:'Montaña',    color1:'#9e9e9e', color2:'#757575', dificultad:'frio',    enemyRate:0.06},
-  {id:4, nombre:'Pantano',    color1:'#5d4037', color2:'#4e342e', dificultad:'veneno',  enemyRate:0.07},
-  {id:5, nombre:'Volcán',     color1:'#d84315', color2:'#bf360c', dificultad:'calor',   enemyRate:0.10},
-  {id:6, nombre:'Castillo',   color1:'#37474f', color2:'#263238', dificultad:null,      enemyRate:0.15}
+  {id:0, nombre:'Pueblo',     color1:'#4caf50', color2:'#388e3c', dificultad:null},
+  {id:1, nombre:'Bosque',     color1:'#2e7d32', color2:'#1b5e20', dificultad:null},
+  {id:2, nombre:'Desierto',   color1:'#f9a825', color2:'#f57f17', dificultad:'sed'},
+  {id:3, nombre:'Montana',    color1:'#9e9e9e', color2:'#757575', dificultad:'frio'},
+  {id:4, nombre:'Pantano',    color1:'#5d4037', color2:'#4e342e', dificultad:'veneno'},
+  {id:5, nombre:'Volcan',     color1:'#d84315', color2:'#bf360c', dificultad:'calor'},
+  {id:6, nombre:'Castillo',   color1:'#37474f', color2:'#263238', dificultad:null}
 ];
 
-// Mapeo de biomas (8 regiones de 8x8 en un mundo 64x64)
 function getBioma(x, y) {
   const bx = Math.min(7, Math.floor(x / 8));
   const by = Math.min(7, Math.floor(y / 8));
-  // 7 biomas en una cuadrícula 4x2 (con el Castillo en la esquina inferior derecha)
   const mapa = [
     [0, 1, 1, 2, 2, 5, 5, 5],
     [1, 1, 2, 2, 3, 5, 5, 6],
@@ -62,152 +60,150 @@ function getBioma(x, y) {
 // ============================================================================
 // PROYECCIÓN ISOMÉTRICA
 // ============================================================================
-function iso(x,y){return{x:(x-y)*TW/2,y:(x+y)*TH/2};}
-
-function worldCenter(){
-  // Centrar en la posición actual del jugador
-  const c=iso(pl.gx,pl.gy);
-  return{x:W/2-c.x,y:H/2-c.y};
+function iso(x, y) {
+  return {x: (x - y) * TW / 2, y: (x + y) * TH / 2};
 }
 
-function screenToCell(sx,sy){
-  const wc=worldCenter();
-  const rx=sx-wc.x,ry=sy-wc.y;
-  return{
-    x:Math.round((rx/(TW/2)+ry/(TH/2))/2),
-    y:Math.round((ry/(TH/2)-rx/(TW/2))/2)
+function getCamera() {
+  const p = iso(pl.fx, pl.fy);
+  return {x: W / 2 - p.x, y: H / 2 - p.y};
+}
+
+function screenToCell(sx, sy) {
+  const cam = getCamera();
+  const rx = sx - cam.x;
+  const ry = sy - cam.y;
+  return {
+    x: Math.round((rx / (TW / 2) + ry / (TH / 2)) / 2),
+    y: Math.round((ry / (TH / 2) - rx / (TW / 2)) / 2)
   };
 }
 
 // ============================================================================
 // MUNDO
 // ============================================================================
-const world=[];
-for(let y=0;y<WORLD_H;y++){
-  world[y]=[];
-  for(let x=0;x<WORLD_W;x++){
-    const bioma=BIOMAS[getBioma(x,y)];
-    let tile=0;
-    // Bordes del mundo = agua
-    if(x===0||x===WORLD_W-1||y===0||y===WORLD_H-1){tile=1;}
-    // Bioma Pueblo = seguro (sin obstáculos)
-    else if(bioma.id===0){tile=0;}
-    // Biomas con dificultad = algunos obstáculos (árboles, rocas, agua)
-    else{
-      const v=((x*374761393+y*668265263)^0x5bf03635)>>>0;
-      tile=(v%20<1)?1:0;
+const world = [];
+for (let y = 0; y < WORLD_H; y++) {
+  world[y] = [];
+  for (let x = 0; x < WORLD_W; x++) {
+    if (x === 0 || x === WORLD_W - 1 || y === 0 || y === WORLD_H - 1) {
+      world[y][x] = 1;
+    } else if (BIOMAS[getBioma(x, y)].id === 0) {
+      world[y][x] = 0;
+    } else {
+      const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+      world[y][x] = (v % 20 < 1) ? 1 : 0;
     }
-    world[y][x]=tile;
   }
 }
-
-// Asegurar que el punto de spawn sea caminable
-world[8][8]=0;
+world[8][8] = 0;
 
 // ============================================================================
-// NPCs
+// NPCs (sin emojis, formas geométricas)
 // ============================================================================
-const npcs=[
-  {x:6,y:6,nombre:'Herrero',bioma:0,emoji:'⚔️'},
-  {x:9,y:7,nombre:'Mago',bioma:0,emoji:'🧙'},
-  {x:7,y:9,nombre:'Comerciante',bioma:0,emoji:'💰'},
-  {x:20,y:12,nombre:'Leñador',bioma:1,emoji:'🪓'},
-  {x:35,y:15,nombre:'Comerciante Nómada',bioma:2,emoji:'🐪'},
-  {x:50,y:25,nombre:'Alquimista',bioma:3,emoji:'🧪'},
-  {x:20,y:45,nombre:'Bruja',bioma:4,emoji:'🧙‍♀️'},
-  {x:55,y:40,nombre:'Herrero de Lava',bioma:5,emoji:'🔥'},
-  {x:58,y:58,nombre:'Rey',bioma:6,emoji:'👑'}
+const npcs = [
+  {x:6, y:6, nombre:'Herrero', color:'#e53935'},
+  {x:9, y:7, nombre:'Mago', color:'#8e24aa'},
+  {x:7, y:9, nombre:'Comerciante', color:'#ffb300'},
+  {x:20, y:12, nombre:'Lenador', color:'#6d4c41'},
+  {x:35, y:15, nom:'Nomada', color:'#ff8f00'},
+  {x:50, y:25, nombre:'Alquimista', color:'#00897b'},
+  {x:20, y:45, nombre:'Bruja', color:'#5e35b1'},
+  {x:55, y:40, nombre:'HerreroLava', color:'#d84315'},
+  {x:58, y:58, nombre:'Rey', color:'#ffd600'}
 ];
 
 // ============================================================================
 // COFRES
 // ============================================================================
-const cofres=[
-  {x:10,y:10,abierto:false,loot:'Espada de Hierro'},
-  {x:25,y:18,abierto:false,loot:'Poción de Vida'},
-  {x:40,y:22,abierto:false,loot:'50 Monedas'},
-  {x:55,y:35,abierto:false,loot:'Armadura de Fuego'},
-  {x:15,y:50,abierto:false,loot:'Antídoto'},
-  {x:60,y:60,abierto:false,loot:'Corona del Rey'}
+const cofres = [
+  {x:10, y:10, abierto:false},
+  {x:25, y:18, abierto:false},
+  {x:40, y:22, abierto:false},
+  {x:55, y:35, abierto:false},
+  {x:15, y:50, abierto:false},
+  {x:60, y:60, abierto:false}
 ];
 
 // ============================================================================
 // JUGADOR
 // ============================================================================
-const pl={
-  gx:8,gy:8,
-  fx:8.0,fy:8.0,
-  path:[],
-  frame:0,ft:0,
-  hp:100,mhp:100,
-  sed:100,maxSed:100,
-  temp:100,maxTemp:100,
-  nivel:1,xp:0,xpNext:100,
-  oro:50,
-  biomaActual:0
+const pl = {
+  gx: 8, gy: 8,
+  fx: 8.0, fy: 8.0,
+  path: [],
+  frame: 0, ft: 0,
+  hp: 100, mhp: 100,
+  sed: 100, maxSed: 100,
+  temp: 100, maxTemp: 100,
+  nivel: 1, xp: 0,
+  oro: 50,
+  biomaActual: 0
 };
 
 // ============================================================================
 // DIFICULTADES AMBIENTALES
 // ============================================================================
-function aplicarDificultad(dt){
-  const bioma=BIOMAS[pl.biomaActual];
-  if(!bioma.dificultad) return;
+function aplicarDificultad(dt) {
+  const bioma = BIOMAS[pl.biomaActual];
+  if (!bioma.dificultad) return;
   
-  switch(bioma.dificultad){
+  switch(bioma.dificultad) {
     case 'sed':
-      pl.sed=Math.max(0,pl.sed-dt*2);
-      if(pl.sed===0) pl.hp=Math.max(0,pl.hp-dt*1);
+      pl.sed = Math.max(0, pl.sed - dt * 2);
+      if (pl.sed === 0) pl.hp = Math.max(0, pl.hp - dt * 1);
       break;
     case 'frio':
-      pl.temp=Math.max(0,pl.temp-dt*2);
-      if(pl.temp===0) pl.hp=Math.max(0,pl.hp-dt*1.5);
+      pl.temp = Math.max(0, pl.temp - dt * 2);
+      if (pl.temp === 0) pl.hp = Math.max(0, pl.hp - dt * 1.5);
       break;
     case 'calor':
-      pl.sed=Math.max(0,pl.sed-dt*3);
-      if(pl.sed===0) pl.hp=Math.max(0,pl.hp-dt*2);
+      pl.sed = Math.max(0, pl.sed - dt * 3);
+      if (pl.sed === 0) pl.hp = Math.max(0, pl.hp - dt * 2);
       break;
     case 'veneno':
-      if(Math.random()<0.005) pl.hp=Math.max(0,pl.hp-dt*3);
+      if (Math.random() < 0.005) pl.hp = Math.max(0, pl.hp - dt * 3);
       break;
   }
 }
 
 // ============================================================================
-// PATHFINDING (BFS)
+// PATHFINDING (BFS) - 8 direcciones, sin atravesar esquinas
 // ============================================================================
-function findPath(sx,sy,gx,gy){
-  if(gx<0||gx>=WORLD_W||gy<0||gy>=WORLD_H)return[];
-  if(world[gy][gx]!==0)return[];
-  // No caminar sobre NPCs o cofres cerrados
-  for(const n of npcs)if(n.x===gx&&n.y===gy)return[];
-  for(const co of cofres)if(co.x===gx&&co.y===gy&&!co.abierto)return[];
+function findPath(sx, sy, gx, gy) {
+  if (gx < 0 || gx >= WORLD_W || gy < 0 || gy >= WORLD_H) return [];
+  if (world[gy][gx] !== 0) return [];
   
-  const open=[{x:sx,y:sy,p:[]}];
-  const vis=new Set();
-  vis.add(sx+','+sy);
+  for (const n of npcs) if (n.x === gx && n.y === gy) return [];
+  for (const co of cofres) if (co.x === gx && co.y === gy && !co.abierto) return [];
   
-  while(open.length){
-    const c=open.shift();
-    if(c.x===gx&&c.y===gy)return c.p;
-    for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
-      const nx=c.x+dx,ny=c.y+dy,k=nx+','+ny;
-      if(nx<0||nx>=WORLD_W||ny<0||ny>=WORLD_H)continue;
-      if(vis.has(k)||world[ny][nx]!==0)continue;
-      // No pasar por NPCs/cofres
-      let blocked=false;
-      for(const n of npcs)if(n.x===nx&&n.y===ny){blocked=true;break;}
-      if(blocked)continue;
-      for(const co of cofres)if(co.x===nx&&co.y===ny&&!co.abierto){blocked=true;break;}
-      if(blocked)continue;
-      // Verificar que las celdas adyacentes al movimiento diagonal estén libres
-      // (para no atravesar esquinas)
-      if(dx!==0&&dy!==0){
-        if(world[c.y+dy][c.x]!==0)continue;
-        if(world[c.y][c.x+dx]!==0)continue;
+  const open = [{x: sx, y: sy, p: []}];
+  const vis = new Set();
+  vis.add(sx + ',' + sy);
+  
+  while (open.length) {
+    const c = open.shift();
+    if (c.x === gx && c.y === gy) return c.p;
+    
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+      const nx = c.x + dx, ny = c.y + dy, k = nx + ',' + ny;
+      if (nx < 0 || nx >= WORLD_W || ny < 0 || ny >= WORLD_H) continue;
+      if (vis.has(k) || world[ny][nx] !== 0) continue;
+      
+      let blocked = false;
+      for (const n of npcs) if (n.x === nx && n.y === ny) { blocked = true; break; }
+      if (blocked) continue;
+      for (const co of cofres) if (co.x === nx && co.y === ny && !co.abierto) { blocked = true; break; }
+      if (blocked) continue;
+      
+      // No atravesar esquinas en diagonales
+      if (dx !== 0 && dy !== 0) {
+        if (world[c.y + dy][c.x] !== 0) continue;
+        if (world[c.y][c.x + dx] !== 0) continue;
       }
+      
       vis.add(k);
-      open.push({x:nx,y:ny,p:[...c.p,{x:nx,y:ny}]});
+      open.push({x: nx, y: ny, p: [...c.p, {x: nx, y: ny}]});
     }
   }
   return [];
@@ -216,323 +212,339 @@ function findPath(sx,sy,gx,gy){
 // ============================================================================
 // INPUT
 // ============================================================================
-c.addEventListener('touchstart',e=>{
+c.addEventListener('touchstart', e => {
   e.preventDefault();
-  if(pl.path.length>0)return;
+  if (pl.path.length > 0) return;
   
-  const t=e.changedTouches[0];
-  const cell=screenToCell(t.clientX,t.clientY);
+  const t = e.changedTouches[0];
+  const cell = screenToCell(t.clientX, t.clientY);
   
-  // Verificar límites
-  if(cell.x<0||cell.x>=WORLD_W||cell.y<0||cell.y>=WORLD_H)return;
+  if (cell.x < 0 || cell.x >= WORLD_W || cell.y < 0 || cell.y >= WORLD_H) return;
   
-  // Verificar si hay NPC
-  for(const n of npcs){
-    if(n.x===cell.x&&n.y===cell.y){
-      alert('NPC: '+n.nombre+'\n\nHola, viajero. Aún no tengo nada para ti.');
+  // Verificar NPC
+  for (const n of npcs) {
+    if (n.x === cell.x && n.y === cell.y) {
+      mostrarMensaje('NPC: ' + n.nombre, 'Hola, viajero.');
       return;
     }
   }
   
-  // Verificar si hay cofre
-  for(const co of cofres){
-    if(co.x===cell.x&&co.y===cell.y&&!co.abierto){
-      co.abierto=true;
-      pl.oro+=10;
-      alert('🎁 Cofre abierto!\n\nEncontraste: '+co.loot+'\n+10 oro');
+  // Verificar cofre
+  for (const co of cofres) {
+    if (co.x === cell.x && co.y === cell.y && !co.abierto) {
+      co.abierto = true;
+      pl.oro += 10;
+      mostrarMensaje('Cofre abierto', '+10 oro');
+      guardar();
       return;
     }
   }
   
-  if(world[cell.y][cell.x]!==0)return;
+  if (world[cell.y][cell.x] !== 0) return;
   
-  pl.path=findPath(pl.gx,pl.gy,cell.x,cell.y);
-},{passive:false});
+  pl.path = findPath(pl.gx, pl.gy, cell.x, cell.y);
+}, {passive: false});
+
+// ============================================================================
+// UI - MENSAJES (sin alert, personalizado)
+// ============================================================================
+let mensaje = {titulo: '', texto: '', t: 0};
+
+function mostrarMensaje(titulo, texto) {
+  mensaje = {titulo, texto, t: 3};
+}
 
 // ============================================================================
 // GUARDADO
 // ============================================================================
-function guardar(){
-  localStorage.setItem('pachamirai_save',JSON.stringify({
-    gx:pl.gx,gy:pl.gy,fx:pl.fx,fy:pl.fy,
-    hp:pl.hp,oro:pl.oro,sed:pl.sed,temp:pl.temp,
-    nivel:pl.nivel,xp:pl.xp,
-    cofres:cofres.map(c=>({x:c.x,y:c.y,abierto:c.abierto}))
+function guardar() {
+  localStorage.setItem('pachamirai_save', JSON.stringify({
+    gx: pl.gx, gy: pl.gy, fx: pl.fx, fy: pl.fy,
+    hp: pl.hp, oro: pl.oro, sed: pl.sed, temp: pl.temp,
+    nivel: pl.nivel, xp: pl.xp,
+    cofres: cofres.map(c => ({x: c.x, y: c.y, abierto: c.abierto}))
   }));
 }
 
-function cargar(){
-  const data=localStorage.getItem('pachamirai_save');
-  if(!data)return;
-  try{
-    const s=JSON.parse(data);
-    pl.gx=s.gx;pl.gy=s.gy;pl.fx=s.fx;pl.fy=s.fy;
-    pl.hp=s.hp;pl.oro=s.oro;pl.sed=s.sed||100;pl.temp=s.temp||100;
-    pl.nivel=s.nivel||1;pl.xp=s.xp||0;
-    if(s.cofres){
-      for(const sc of s.cofres){
-        for(const co of cofres){
-          if(co.x===sc.x&&co.y===sc.y)co.abierto=sc.abierto;
+function cargar() {
+  const data = localStorage.getItem('pachamirai_save');
+  if (!data) return;
+  try {
+    const s = JSON.parse(data);
+    pl.gx = s.gx; pl.gy = s.gy; pl.fx = s.fx; pl.fy = s.fy;
+    pl.hp = s.hp; pl.oro = s.oro; pl.sed = s.sed || 100; pl.temp = s.temp || 100;
+    pl.nivel = s.nivel || 1; pl.xp = s.xp || 0;
+    if (s.cofres) {
+      for (const sc of s.cofres) {
+        for (const co of cofres) {
+          if (co.x === sc.x && co.y === sc.y) co.abierto = sc.abierto;
         }
       }
     }
-  }catch(e){}
+  } catch(e) {}
 }
 
-// Guardar al salir
-window.addEventListener('beforeunload',guardar);
+window.addEventListener('beforeunload', guardar);
+
+// ============================================================================
+// RENDER HELPERS
+// ============================================================================
+function drawDiamond(sx, sy, w, h, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + w / 2, sy + h / 2);
+  ctx.lineTo(sx, sy + h);
+  ctx.lineTo(sx - w / 2, sy + h / 2);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+function drawChar(sx, sy, color, bo) {
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + TH/2 + 4, 10, 4, 0, 0, Math.PI*2);
+  ctx.fill();
+  
+  // Piernas
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(sx - 4, sy + TH/2 - 8, 3, 8 + bo);
+  ctx.fillRect(sx + 1, sy + TH/2 - 8, 3, 8 + bo);
+  
+  // Cuerpo
+  ctx.fillStyle = color || '#1976d2';
+  ctx.fillRect(sx - 6, sy + TH/2 - 20, 12, 14);
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(sx - 6, sy + TH/2 - 20, 12, 4);
+  ctx.fillStyle = '#ffc107';
+  ctx.fillRect(sx - 6, sy + TH/2 - 8, 12, 2);
+  
+  // Cabeza
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(sx - 4, sy + TH/2 - 26, 8, 7);
+  ctx.fillStyle = '#3e2723';
+  ctx.fillRect(sx - 4, sy + TH/2 - 28, 8, 3);
+  
+  // Ojos
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(sx - 2, sy + TH/2 - 24, 2, 2);
+  ctx.fillRect(sx + 1, sy + TH/2 - 24, 2, 2);
+}
 
 // ============================================================================
 // GAME LOOP
 // ============================================================================
-let last=performance.now();
+let last = performance.now();
 
-function loop(ts){
-  const dt=Math.min((ts-last)/1000,0.1);
-  last=ts;
+function loop(ts) {
+  const dt = Math.min((ts - last) / 1000, 0.1);
+  last = ts;
   
-  // Aplicar dificultad ambiental
-  pl.biomaActual=getBioma(pl.gx,pl.gy);
+  // Actualizar mensaje
+  if (mensaje.t > 0) mensaje.t -= dt;
+  
+  // Dificultad ambiental
+  pl.biomaActual = getBioma(Math.floor(pl.gx), Math.floor(pl.gy));
   aplicarDificultad(dt);
   
-  // Movimiento exacto
-  if(pl.path.length>0){
-    const t=pl.path[0];
-    const speed=3.3*dt;
-    const dx=t.x-pl.fx,dy=t.y-pl.fy;
-    const dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<speed||dist<0.005){
-      pl.fx=t.x;pl.fy=t.y;pl.gx=t.x;pl.gy=t.y;pl.path.shift();
-      // Guardar al moverse
-      if(!pl.path.length)guardar();
-    }else{
-      pl.fx+=(dx/dist)*speed;
-      pl.fy+=(dy/dist)*speed;
+  // Movimiento
+  if (pl.path.length > 0) {
+    const t = pl.path[0];
+    const speed = 3.3 * dt;
+    const dx = t.x - pl.fx, dy = t.y - pl.fy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist < speed || dist < 0.005) {
+      pl.fx = t.x; pl.fy = t.y; pl.gx = t.x; pl.gy = t.y;
+      pl.path.shift();
+      if (!pl.path.length) guardar();
+    } else {
+      pl.fx += (dx/dist) * speed;
+      pl.fy += (dy/dist) * speed;
     }
-    pl.ft+=dt;
-    if(pl.ft>0.15){pl.ft=0;pl.frame=(pl.frame+1)%2;}
+    
+    pl.ft += dt;
+    if (pl.ft > 0.15) { pl.ft = 0; pl.frame = (pl.frame + 1) % 2; }
   }
   
   // === RENDER ===
-  ctx.fillStyle='#0d1b0d';
-  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#0d1b0d';
+  ctx.fillRect(0, 0, W, H);
   
-  const wc=worldCenter();
+  const cam = getCamera();
+  const camCell = screenToCell(W/2, H/2);
+  const viewDist = 10;
   
-  // Visibilidad: solo renderizar celdas visibles
-  const camCell=screenToCell(W/2,H/2);
-  const viewDist=10;
-  
-  for(let y=Math.max(0,camCell.y-viewDist);y<Math.min(WORLD_H,camCell.y+viewDist);y++){
-    for(let x=Math.max(0,camCell.x-viewDist);x<Math.min(WORLD_W,camCell.x+viewDist);x++){
-      const s=iso(x,y),sx=s.x+wc.x,sy=s.y+wc.y;
-      if(sx<-TW||sx>W+TW||sy<-TH*2||sy>H+TH)continue;
+  // Tiles
+  for (let y = Math.max(0, camCell.y - viewDist); y < Math.min(WORLD_H, camCell.y + viewDist); y++) {
+    for (let x = Math.max(0, camCell.x - viewDist); x < Math.min(WORLD_W, camCell.x + viewDist); x++) {
+      const s = iso(x, y);
+      const sx = s.x + cam.x - TW/2;
+      const sy = s.y + cam.y - TH/2;
+      if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
       
-      const bioma=BIOMAS[getBioma(x,y)];
-      const tile=world[y][x];
-      const inPath=pl.path.find(p=>p.x===x&&p.y===y);
+      const bioma = BIOMAS[getBioma(x, y)];
+      const tile = world[y][x];
+      const inPath = pl.path.find(p => p.x === x && p.y === y);
       
-      // Diamante
-      ctx.beginPath();
-      ctx.moveTo(sx,sy);
-      ctx.lineTo(sx+TW/2,sy+TH/2);
-      ctx.lineTo(sx,sy+TH);
-      ctx.lineTo(sx-TW/2,sy+TH/2);
-      ctx.closePath();
-      
-      if(tile===1){
-        ctx.fillStyle='#1565c0';
-        ctx.fill();
-        ctx.strokeStyle='#4fc3f7';
-        ctx.lineWidth=1;
-        ctx.stroke();
-      }else{
-        // Color del bioma
-        ctx.fillStyle=(x+y)%2===0?bioma.color1:bioma.color2;
-        ctx.fill();
-        ctx.strokeStyle='rgba(0,0,0,0.15)';
-        ctx.lineWidth=1;
-        ctx.stroke();
+      if (tile === 1) {
+        drawDiamond(sx, sy, TW, TH, '#1565c0', '#4fc3f7');
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(sx - 8, sy + TH/2, 6, 2);
+      } else {
+        drawDiamond(sx, sy, TW, TH, (x+y) % 2 === 0 ? bioma.color1 : bioma.color2, 'rgba(0,0,0,0.12)');
         
-        // Sombra
-        ctx.fillStyle='rgba(0,0,0,0.08)';
+        // Sombra 3D
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
         ctx.beginPath();
-        ctx.moveTo(sx,sy+TH);
-        ctx.lineTo(sx+TW/2,sy+TH/2);
-        ctx.lineTo(sx+TW/2,sy+TH);
-        ctx.lineTo(sx,sy+TH+TH/2);
+        ctx.moveTo(sx, sy + TH);
+        ctx.lineTo(sx + TW/2, sy + TH/2);
+        ctx.lineTo(sx + TW/2, sy + TH + TH/2);
+        ctx.lineTo(sx, sy + TH + TH/2);
         ctx.closePath();
         ctx.fill();
       }
       
-      // Camino con brillo suave
-      if(inPath){
-        ctx.fillStyle='rgba(200,200,80,0.18)';
-        ctx.beginPath();
-        ctx.moveTo(sx,sy);
-        ctx.lineTo(sx+TW/2,sy+TH/2);
-        ctx.lineTo(sx,sy+TH);
-        ctx.lineTo(sx-TW/2,sy+TH/2);
-        ctx.closePath();
-        ctx.fill();
+      if (inPath) {
+        ctx.fillStyle = 'rgba(200,200,80,0.18)';
+        drawDiamond(sx, sy, TW, TH, 'rgba(200,200,80,0.18)', null);
       }
     }
   }
   
   // Cofres
-  for(const co of cofres){
-    if(co.abierto)continue;
-    const s=iso(co.x,co.y),sx=s.x+wc.x,sy=s.y+wc.y;
-    if(sx<-TW||sx>W+TW||sy<-TH||sy>H+TH)continue;
-    ctx.fillStyle='#ffd700';
-    ctx.fillRect(sx-5,sy+TH/2-3,10,6);
-    ctx.fillStyle='#b8860b';
-    ctx.fillRect(sx-5,sy+TH/2-3,10,2);
+  for (const co of cofres) {
+    if (co.abierto) continue;
+    const s = iso(co.x, co.y);
+    const sx = s.x + cam.x;
+    const sy = s.y + cam.y;
+    if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(sx - 5, sy - 3, 10, 6);
+    ctx.fillStyle = '#b8860b';
+    ctx.fillRect(sx - 5, sy - 3, 10, 2);
   }
   
   // NPCs
-  for(const n of npcs){
-    const s=iso(n.x,n.y),sx=s.x+wc.x,sy=s.y+wc.y;
-    if(sx<-TW||sx>W+TW||sy<-TH||sy>H+TH)continue;
-    ctx.fillStyle='rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(sx,sy+TH/2+4,8,3,0,0,Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.fillRect(sx-6,sy+TH/2-12,12,14);
-    ctx.fillStyle='#333';
-    ctx.fillRect(sx-6,sy+TH/2-14,12,4);
-    ctx.fillStyle='#fff';
-    ctx.fillRect(sx-4,sy+TH/2-10,2,2);
-    ctx.fillRect(sx+1,sy+TH/2-10,2,2);
-    // Nombre
-    ctx.fillStyle='#fff';
-    ctx.font='8px monospace';
-    ctx.textAlign='center';
-    ctx.fillText(n.nombre,sx,sy+TH/2-18);
+  for (const n of npcs) {
+    const s = iso(n.x, n.y);
+    const sx = s.x + cam.x;
+    const sy = s.y + cam.y;
+    if (sx < -TW || sx > W + TW || sy < -TH || sy > H + TH) continue;
+    drawChar(sx, sy, n.color, 0);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.nombre, sx, sy - 8);
   }
   
   // Jugador
-  const ps=iso(pl.fx,pl.fy),px=ps.x+wc.x,py=ps.y+wc.y-TH-12,bo=pl.frame===0?0:1;
-  ctx.fillStyle='rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.ellipse(px,py+28,12,5,0,0,Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle='#5d4037';
-  ctx.fillRect(px-5,py+12,4,8+bo);
-  ctx.fillRect(px+1,py+12,4,8+bo);
-  ctx.fillStyle='#1976d2';
-  ctx.fillRect(px-8,py-4,16,18);
-  ctx.fillStyle='#1565c0';
-  ctx.fillRect(px-8,py-4,16,5);
-  ctx.fillStyle='#ffc107';
-  ctx.fillRect(px-8,py+8,16,3);
-  ctx.fillStyle='#ffe0b2';
-  ctx.fillRect(px-5,py-14,10,9);
-  ctx.fillStyle='#3e2723';
-  ctx.fillRect(px-5,py-16,10,3);
-  ctx.fillStyle='#fff';
-  ctx.fillRect(px-3,py-10,3,3);
-  ctx.fillRect(px+1,py-10,3,3);
-  ctx.fillStyle='#000';
-  ctx.fillRect(px-2,py-9,2,2);
-  ctx.fillRect(px+2,py-9,2,2);
+  const ps = iso(pl.fx, pl.fy);
+  const px = ps.x + cam.x;
+  const py = ps.y + cam.y;
+  drawChar(px, py, '#1976d2', pl.frame === 0 ? 0 : 1);
   
-  // UI
-  ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(10,10,160,70);
-  ctx.fillStyle='#fff';
-  ctx.font='bold 14px monospace';
-  ctx.textAlign='left';
-  ctx.textBaseline='middle';
-  ctx.fillText('Lv.'+pl.nivel+' Hero',18,26);
-  ctx.fillStyle='#4a0000';
-  ctx.fillRect(18,34,140,8);
-  ctx.fillStyle='#e44';
-  ctx.fillRect(19,35,138*pl.hp/pl.mhp,6);
-  ctx.fillStyle='#fff';
-  ctx.font='8px monospace';
-  ctx.fillText(Math.floor(pl.hp)+'/'+pl.mhp,75,40);
+  // === UI ===
+  // Fondo UI
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(10, 10, 160, 70);
   
-  // Barras de dificultad
-  const bioma=BIOMAS[pl.biomaActual];
-  if(bioma.dificultad==='sed'){
-    ctx.fillStyle='#4fc3f7';
-    ctx.fillRect(18,50,140,6);
-    ctx.fillStyle='#0288d1';
-    ctx.fillRect(18,50,140*pl.sed/pl.maxSed,6);
-    ctx.fillStyle='#fff';
-    ctx.font='7px monospace';
-    ctx.fillText('SED',80,55);
-  }else if(bioma.dificultad==='frio'){
-    ctx.fillStyle='#b3e5fc';
-    ctx.fillRect(18,50,140,6);
-    ctx.fillStyle='#0277bd';
-    ctx.fillRect(18,50,140*pl.temp/pl.maxTemp,6);
-    ctx.fillStyle='#fff';
-    ctx.font='7px monospace';
-    ctx.fillText('TEMP',78,55);
-  }else if(bioma.dificultad==='calor'){
-    ctx.fillStyle='#ffcc80';
-    ctx.fillRect(18,50,140,6);
-    ctx.fillStyle='#e65100';
-    ctx.fillRect(18,50,140*pl.sed/pl.maxSed,6);
-    ctx.fillStyle='#fff';
-    ctx.font='7px monospace';
-    ctx.fillText('SED',80,55);
-  }else if(bioma.dificultad==='veneno'){
-    ctx.fillStyle='#c8e6c9';
-    ctx.fillRect(18,50,140,6);
-    ctx.fillStyle='#2e7d32';
-    ctx.fillRect(18,50,140,6);
-    ctx.fillStyle='#fff';
-    ctx.font='7px monospace';
-    ctx.fillText('VENENO',73,55);
+  // Nombre y nivel
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Lv.' + pl.nivel + ' Hero', 18, 26);
+  
+  // Barra HP
+  ctx.fillStyle = '#4a0000';
+  ctx.fillRect(18, 34, 140, 8);
+  ctx.fillStyle = '#e44';
+  ctx.fillRect(19, 35, 138 * pl.hp / pl.mhp, 6);
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px monospace';
+  ctx.fillText(Math.floor(pl.hp) + '/' + pl.mhp, 75, 40);
+  
+  // Barra dificultad
+  const bioma = BIOMAS[pl.biomaActual];
+  if (bioma.dificultad === 'sed' || bioma.dificultad === 'calor') {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(18, 50, 140, 6);
+    ctx.fillStyle = bioma.dificultad === 'sed' ? '#0288d1' : '#e65100';
+    ctx.fillRect(18, 50, 140 * pl.sed / pl.maxSed, 6);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px monospace';
+    ctx.fillText('SED', 78, 55);
+  } else if (bioma.dificultad === 'frio') {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(18, 50, 140, 6);
+    ctx.fillStyle = '#0277bd';
+    ctx.fillRect(18, 50, 140 * pl.temp / pl.maxTemp, 6);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px monospace';
+    ctx.fillText('TEMP', 76, 55);
+  } else if (bioma.dificultad === 'veneno') {
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(18, 50, 140, 6);
+    ctx.fillStyle = '#7cb342';
+    ctx.fillRect(18, 50, 140, 6);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px monospace';
+    ctx.fillText('TOXICO', 73, 55);
   }
   
-  // Info
-  ctx.fillStyle='#ffd700';
-  ctx.font='11px monospace';
-  ctx.textAlign='left';
-  ctx.fillText('🪙 '+pl.oro,18,H-60);
-  ctx.fillStyle='#0f0';
-  ctx.fillText('Bioma: '+bioma.nombre,18,H-45);
-  ctx.fillText('Pos: '+pl.gx+','+pl.gy,18,H-30);
+  // Info inferior
+  ctx.fillStyle = '#ffd700';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Oro: ' + pl.oro, 18, H - 60);
+  ctx.fillStyle = '#0f0';
+  ctx.fillText('Bioma: ' + bioma.nombre, 18, H - 45);
+  ctx.fillText('Pos: ' + Math.floor(pl.gx) + ',' + Math.floor(pl.gy), 18, H - 30);
   
   // Minimapa
-  const mmW=100,mmH=100;
-  const mmX=W-mmW-10,mmY=H-mmH-10;
-  ctx.fillStyle='rgba(0,0,0,0.7)';
-  ctx.fillRect(mmX,mmY,mmW,mmH);
+  const mmW = 100, mmH = 100;
+  const mmX = W - mmW - 10, mmY = H - mmH - 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(mmX, mmY, mmW, mmH);
   
-  // Biomas en minimapa
-  for(let y=0;y<WORLD_H;y+=2){
-    for(let x=0;x<WORLD_W;x+=2){
-      const bioma=BIOMAS[getBioma(x,y)];
-      const px=mmX+(x/WORLD_W)*mmW;
-      const py=mmY+(y/WORLD_H)*mmH;
-      ctx.fillStyle=bioma.color1;
-      ctx.fillRect(px,py,2,2);
+  for (let y = 0; y < WORLD_H; y += 2) {
+    for (let x = 0; x < WORLD_W; x += 2) {
+      const b = BIOMAS[getBioma(x, y)];
+      ctx.fillStyle = b.color1;
+      ctx.fillRect(mmX + (x / WORLD_W) * mmW, mmY + (y / WORLD_H) * mmH, 2, 2);
     }
   }
   
   // Jugador en minimapa
-  const jpx=mmX+(pl.gx/WORLD_W)*mmW;
-  const jpy=mmY+(pl.gy/WORLD_H)*mmH;
-  ctx.fillStyle='#ff0';
-  ctx.fillRect(jpx-2,jpy-2,4,4);
+  ctx.fillStyle = '#ff0';
+  ctx.fillRect(mmX + (pl.gx / WORLD_W) * mmW - 2, mmY + (pl.gy / WORLD_H) * mmH - 2, 4, 4);
   
   // NPCs en minimapa
-  for(const n of npcs){
-    ctx.fillStyle='#0ff';
-    ctx.fillRect(mmX+(n.x/WORLD_W)*mmW-1,mmY+(n.y/WORLD_H)*mmH-1,2,2);
+  ctx.fillStyle = '#0ff';
+  for (const n of npcs) {
+    ctx.fillRect(mmX + (n.x / WORLD_W) * mmW - 1, mmY + (n.y / WORLD_H) * mmH - 1, 2, 2);
   }
   
-  // Leyenda
-  ctx.fillStyle='#fff';
-  ctx.font='8px monospace';
-  ctx.textAlign='left';
-  ctx.fillText('🟦 Agua 🟩 Seguro',mmX,mmY-5);
+  // Mensaje flotante
+  if (mensaje.t > 0) {
+    const alpha = Math.min(1, mensaje.t);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.9)';
+    ctx.fillRect(W/2 - 100, H/2 - 40, 200, 80);
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(W/2 - 100, H/2 - 40, 200, 80);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(mensaje.titulo, W/2, H/2 - 10);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px monospace';
+    ctx.fillText(mensaje.texto, W/2, H/2 + 15);
+    ctx.globalAlpha = 1;
+  }
   
   requestAnimationFrame(loop);
 }
