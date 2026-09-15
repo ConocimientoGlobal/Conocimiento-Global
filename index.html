@@ -4,96 +4,322 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PachaMirai</title>
-<style>*{margin:0;padding:0;background:#000;touch-action:none;user-select:none}html,body{width:100%;height:100%;overflow:hidden}canvas{display:block}</style>
+<style>
+*{margin:0;padding:0;background:#000;touch-action:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden}
+canvas{display:block;position:fixed;top:0;left:0}
+</style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script>
-const c=document.getElementById('c');
-const ctx=c.getContext('2d');
-let W,H;
-function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+// ============================================================================
+// CONFIGURACIÓN
+// ============================================================================
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+
+function resize() {
+  W = c.width = window.innerWidth;
+  H = c.height = window.innerHeight;
+}
 resize();
-window.addEventListener('resize',resize);
+window.addEventListener('resize', resize);
 
-const N=7;
-const STEP=Math.min(W,H)/(N+1);
-const TW=STEP,TH=STEP/2;
+// Mundo
+const WORLD_W = 16;
+const WORLD_H = 16;
 
-function iso(x,y){return{x:(x-y)*TW/2,y:(x+y)*TH/2};}
-function center(){const c=iso((N-1)/2,(N-1)/2);return{x:W/2-c.x,y:H/2-c.y};}
-function s2g(sx,sy){const c=center();const rx=sx-c.x,ry=sy-c.y;return{x:Math.round((rx/(TW/2)+ry/(TH/2))/2),y:Math.round((ry/(TH/2)-rx/(TW/2))/2)};}
+// Tamaño de tile: el mundo encaja en pantalla
+const TILE_SPAN = WORLD_W + WORLD_H - 2; // 30
+const TILE_H = Math.min(H * 0.9, W * 0.45) / (TILE_SPAN / 2);
+const TILE_W = TILE_H * 2;
 
-const world=[];
-for(let y=0;y<N;y++){world[y]=[];for(let x=0;x<N;x++){world[y][x]=0;}}
-
-const pl={gx:3,gy:3,fx:3.0,fy:3.0,path:[],frame:0,ft:0,hp:100,mhp:100};
-const en=[{x:2,y:2,hp:40,mhp:40,c:'#c62828'},{x:5,y:3,hp:50,mhp:50,c:'#6a1b9a'},{x:3,y:5,hp:30,mhp:30,c:'#1565c0'}];
-
-function bfs(sx,sy,gx,gy){
-  if(gx<0||gx>=N||gy<0||gy>=N)return[];
-  const q=[{x:sx,y:sy,p:[]}];const v=new Set([sx+','+sy]);
-  while(q.length){const c=q.shift();if(c.x===gx&&c.y===gy)return c.p;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=c.x+dx,ny=c.y+dy,k=nx+','+ny;if(nx<0||nx>=N||ny<0||ny>=N||v.has(k))continue;let b=false;for(const e of en)if(e.x===nx&&e.y===ny&&e.hp>0){b=true;break;}if(b)continue;v.add(k);q.push({x:nx,y:ny,p:[...c.p,{x:nx,y:ny}]});}}
-  return[];
+// ============================================================================
+// PROYECCIÓN ISOMÉTRICA
+// ============================================================================
+function iso(x, y) {
+  return {
+    x: (x - y) * TILE_W / 2,
+    y: (x + y) * TILE_H / 2
+  };
 }
 
-c.addEventListener('touchstart',e=>{
+// Offset para centrar el mundo en pantalla
+function worldCenter() {
+  const c = iso((WORLD_W - 1) / 2, (WORLD_H - 1) / 2);
+  return { x: W / 2 - c.x, y: H / 2 - c.y };
+}
+
+// Pantalla → Celda (redondeado)
+function screenToCell(sx, sy) {
+  const wc = worldCenter();
+  const rx = sx - wc.x;
+  const ry = sy - wc.y;
+  const gx = (rx / (TILE_W / 2) + ry / (TILE_H / 2)) / 2;
+  const gy = (ry / (TILE_H / 2) - rx / (TILE_W / 2)) / 2;
+  return { x: Math.round(gx), y: Math.round(gy) };
+}
+
+// ============================================================================
+// MUNDO
+// ============================================================================
+const world = [];
+for (let y = 0; y < WORLD_H; y++) {
+  world[y] = [];
+  for (let x = 0; x < WORLD_W; x++) {
+    // Bordes = agua
+    if (x === 0 || x === WORLD_W - 1 || y === 0 || y === WORLD_H - 1) {
+      world[y][x] = 1;
+    } else {
+      // Pseudo-random determinístico para agua interna (~8%)
+      const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+      world[y][x] = (v % 12 < 1) ? 1 : 0;
+    }
+  }
+}
+
+// Verificar que el jugador no aparezca en agua
+while (world[8][8] === 1) {
+  world[8][8] = 0;
+}
+
+// ============================================================================
+// JUGADOR
+// ============================================================================
+const pl = {
+  gx: 8,
+  gy: 8,
+  fx: 8.0,
+  fy: 8.0,
+  path: [],
+  frame: 0,
+  ft: 0,
+  hp: 100,
+  mhp: 100
+};
+
+// ============================================================================
+// PATHFINDING (BFS)
+// ============================================================================
+function findPath(sx, sy, gx, gy) {
+  if (gx < 1 || gx >= WORLD_W - 1 || gy < 1 || gy >= WORLD_H - 1) return [];
+  if (world[gy][gx] === 1) return [];
+
+  const open = [{ x: sx, y: sy, path: [] }];
+  const visited = new Set();
+  visited.add(sx + ',' + sy);
+
+  while (open.length > 0) {
+    const cur = open.shift();
+    if (cur.x === gx && cur.y === gy) return cur.path;
+
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      const key = nx + ',' + ny;
+
+      if (nx < 1 || nx >= WORLD_W - 1 || ny < 1 || ny >= WORLD_H - 1) continue;
+      if (visited.has(key) || world[ny][nx] === 1) continue;
+
+      visited.add(key);
+      open.push({ x: nx, y: ny, path: [...cur.path, { x: nx, y: ny }] });
+    }
+  }
+  return [];
+}
+
+// ============================================================================
+// INPUT
+// ============================================================================
+c.addEventListener('touchstart', e => {
   e.preventDefault();
-  if(pl.path.length>0)return;
-  const t=e.changedTouches[0];
-  const g=s2g(t.clientX,t.clientY);
-  if(g.x<0||g.x>=N||g.y<0||g.y>=N)return;
-  pl.path=bfs(pl.gx,pl.gy,g.x,g.y);
-},{passive:false});
+  if (pl.path.length > 0) return;
 
-let last=performance.now();
+  const t = e.changedTouches[0];
+  const cell = screenToCell(t.clientX, t.clientY);
 
-function loop(ts){
-  const dt=Math.min((ts-last)/1000,0.1);
-  last=ts;
+  if (cell.x < 1 || cell.x >= WORLD_W - 1 || cell.y < 1 || cell.y >= WORLD_H - 1) return;
+  if (world[cell.y][cell.x] === 1) return;
 
-  if(pl.path.length>0){
-    const t=pl.path[0];
-    const dx=t.x-pl.fx,dy=t.y-pl.fy;
-    const dist=Math.sqrt(dx*dx+dy*dy);
-    const speed=3*dt;
-    if(dist<speed||dist<0.01){pl.fx=t.x;pl.fy=t.y;pl.gx=t.x;pl.gy=t.y;pl.path.shift();}
-    else{pl.fx+=dx/dist*speed;pl.fy+=dy/dist*speed;}
-    pl.ft+=dt;if(pl.ft>0.12){pl.ft=0;pl.frame=(pl.frame+1)%2;}
+  pl.path = findPath(pl.gx, pl.gy, cell.x, cell.y);
+}, { passive: false });
+
+// ============================================================================
+// GAME LOOP
+// ============================================================================
+let last = performance.now();
+
+function loop(ts) {
+  const dt = Math.min((ts - last) / 1000, 0.1);
+  last = ts;
+
+  // Movimiento exacto (0.2 segundos por tile)
+  if (pl.path.length > 0) {
+    const t = pl.path[0];
+    const speed = 5 * dt;
+    const dx = t.x - pl.fx;
+    const dy = t.y - pl.fy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < speed || dist < 0.005) {
+      // SNAP exacto al centro de la celda
+      pl.fx = t.x;
+      pl.fy = t.y;
+      pl.gx = t.x;
+      pl.gy = t.y;
+      pl.path.shift();
+    } else {
+      pl.fx += (dx / dist) * speed;
+      pl.fy += (dy / dist) * speed;
+    }
+
+    // Animación de caminar
+    pl.ft += dt;
+    if (pl.ft > 0.15) {
+      pl.ft = 0;
+      pl.frame = (pl.frame + 1) % 2;
+    }
   }
 
-  ctx.fillStyle='#0d1b0d';ctx.fillRect(0,0,W,H);
-  const c=center();
+  // === RENDER ===
+  ctx.fillStyle = '#0d1b0d';
+  ctx.fillRect(0, 0, W, H);
 
-  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
-    const s=iso(x,y),sx=s.x+c.x,sy=s.y+c.y;
-    const inPath=pl.path.find(p=>p.x===x&&p.y===y);
-    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();
-    ctx.fillStyle='#4caf50';ctx.fill();ctx.strokeStyle='#2e7d32';ctx.lineWidth=2;ctx.stroke();
-    if(inPath){ctx.fillStyle='rgba(180,180,80,0.15)';ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+TW/2,sy+TH/2);ctx.lineTo(sx,sy+TH);ctx.lineTo(sx-TW/2,sy+TH/2);ctx.closePath();ctx.fill();}
+  const wc = worldCenter();
+
+  // Tiles
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      const s = iso(x, y);
+      const sx = s.x + wc.x;
+      const sy = s.y + wc.y;
+
+      // Frustum culling
+      if (sx < -TILE_W || sx > W + TILE_W || sy < -TILE_H * 2 || sy > H + TILE_H) continue;
+
+      const tile = world[y][x];
+      const inPath = pl.path.find(p => p.x === x && p.y === y);
+
+      // Diamante del tile
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);                              // Arriba
+      ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);     // Derecha
+      ctx.lineTo(sx, sy + TILE_H);                       // Abajo
+      ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);     // Izquierda
+      ctx.closePath();
+
+      if (tile === 1) {
+        // Agua
+        ctx.fillStyle = '#1565c0';
+        ctx.fill();
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(sx - 8, sy + TILE_H / 2, 6, 2);
+      } else {
+        // Pasto
+        ctx.fillStyle = '#4caf50';
+        ctx.fill();
+        ctx.strokeStyle = '#2e7d32';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Sombra inferior
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.moveTo(sx, sy + TILE_H);
+        ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+        ctx.lineTo(sx + TILE_W / 2, sy + TILE_H);
+        ctx.lineTo(sx, sy + TILE_H + TILE_H / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(sx, sy + TILE_H);
+        ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+        ctx.lineTo(sx - TILE_W / 2, sy + TILE_H);
+        ctx.lineTo(sx, sy + TILE_H + TILE_H / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pasto decorativo
+        ctx.fillStyle = '#7cb342';
+        ctx.fillRect(sx - 6, sy + TILE_H / 2 - 2, 2, 4);
+        ctx.fillRect(sx + 4, sy + TILE_H / 2 + 4, 2, 4);
+      }
+
+      // Camino con brillo suave
+      if (inPath) {
+        ctx.fillStyle = 'rgba(200,200,80,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + TILE_W / 2, sy + TILE_H / 2);
+        ctx.lineTo(sx, sy + TILE_H);
+        ctx.lineTo(sx - TILE_W / 2, sy + TILE_H / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
   }
 
-  for(const e of en){
-    if(e.hp<=0)continue;
-    const s=iso(e.x,e.y),sx=s.x+c.x,sy=s.y+c.y;
-    ctx.fillStyle='rgba(0,0,0,0.4)';ctx.beginPath();ctx.ellipse(sx,sy+12,10,4,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=e.c;ctx.fillRect(sx-7,sy-5,14,14);ctx.fillStyle='#fff';ctx.fillRect(sx-5,sy-3,3,3);ctx.fillRect(sx+2,sy-3,3,3);
-    ctx.fillStyle='#333';ctx.fillRect(sx-12,sy-14,24,4);ctx.fillStyle='#e44';ctx.fillRect(sx-11,sy-13,22*e.hp/e.mhp,2);
-  }
+  // Jugador
+  const ps = iso(pl.fx, pl.fy);
+  const px = ps.x + wc.x;
+  const py = ps.y + wc.y;
+  const bob = pl.frame === 0 ? 0 : 1;
 
-  const p=iso(pl.fx,pl.fy),px=p.x+c.x,py=p.y+c.y-TH-12,bo=pl.frame===0?0:1;
-  ctx.fillStyle='rgba(0,0,0,0.4)';ctx.beginPath();ctx.ellipse(px,py+28,12,5,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#5d4037';ctx.fillRect(px-5,py+12,4,8+bo);ctx.fillRect(px+1,py+12,4,8+bo);
-  ctx.fillStyle='#1976d2';ctx.fillRect(px-8,py-4,16,18);ctx.fillStyle='#1565c0';ctx.fillRect(px-8,py-4,16,5);
-  ctx.fillStyle='#ffc107';ctx.fillRect(px-8,py+8,16,3);
-  ctx.fillStyle='#ffe0b2';ctx.fillRect(px-5,py-14,10,9);ctx.fillStyle='#3e2723';ctx.fillRect(px-5,py-16,10,3);
-  ctx.fillStyle='#fff';ctx.fillRect(px-3,py-10,3,3);ctx.fillRect(px+1,py-10,3,3);
-  ctx.fillStyle='#000';ctx.fillRect(px-2,py-9,2,2);ctx.fillRect(px+2,py-9,2,2);
+  // Sombra
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + TILE_H / 2 + 2, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(10,10,140,50);
-  ctx.fillStyle='#fff';ctx.font='bold 14px monospace';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Lv.1 Hero',18,26);
-  ctx.fillStyle='#4a0000';ctx.fillRect(18,34,120,9);ctx.fillStyle='#e44';ctx.fillRect(19,35,118,7);
-  ctx.fillStyle='#fff';ctx.font='8px monospace';ctx.fillText('100/100',65,40);
+  // Piernas
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(px - 4, py + TILE_H / 2 - 6, 3, 7 + bob);
+  ctx.fillRect(px + 1, py + TILE_H / 2 - 6, 3, 7 + bob);
+
+  // Cuerpo
+  ctx.fillStyle = '#1976d2';
+  ctx.fillRect(px - 6, py + TILE_H / 2 - 18, 12, 14);
+  ctx.fillStyle = '#1565c0';
+  ctx.fillRect(px - 6, py + TILE_H / 2 - 18, 12, 4);
+  ctx.fillStyle = '#ffc107';
+  ctx.fillRect(px - 6, py + TILE_H / 2 - 6, 12, 3);
+
+  // Cabeza
+  ctx.fillStyle = '#ffe0b2';
+  ctx.fillRect(px - 4, py + TILE_H / 2 - 24, 8, 7);
+  ctx.fillStyle = '#3e2723';
+  ctx.fillRect(px - 4, py + TILE_H / 2 - 26, 8, 3);
+
+  // Ojos
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(px - 2, py + TILE_H / 2 - 22, 2, 2);
+  ctx.fillRect(px + 1, py + TILE_H / 2 - 22, 2, 2);
+
+  // UI
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(10, 10, 140, 50);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Lv.1 Hero', 18, 26);
+  ctx.fillStyle = '#4a0000';
+  ctx.fillRect(18, 34, 120, 9);
+  ctx.fillStyle = '#e44';
+  ctx.fillRect(19, 35, 118 * pl.hp / pl.mhp, 7);
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px monospace';
+  ctx.fillText('100/100', 65, 40);
+
+  ctx.fillStyle = '#0f0';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Pos:' + pl.gx + ',' + pl.gy + ' Path:' + pl.path.length, 10, H - 15);
 
   requestAnimationFrame(loop);
 }
