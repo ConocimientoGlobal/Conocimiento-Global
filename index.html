@@ -60,6 +60,7 @@ const cofres=[
 
 const pl={gx:8,gy:8,fx:8,fy:8,path:[],frame:0,ft:0,hp:100,mhp:100,oro:50};
 let frameCount=0;
+const particles=[];
 
 function iso(x,y){return{x:(x-y)*TW/2,y:(x+y)*TH/2};}
 function getCam(){const p=iso(pl.fx,pl.fy);return{x:W/2-p.x,y:H/2-p.y};}
@@ -76,6 +77,10 @@ function showMsg(title,text){
   msgEl.innerHTML='<b style="font-size:16px">'+(title||'')+'</b><br><br>'+(text||'').replace(/\n/g,'<br>');
   msgEl.style.display='block';
   msgTimeout=3;
+}
+
+function addParticle(x,y,color,speed){
+  particles.push({x,y,vx:(Math.random()-0.5)*speed,vy:-Math.random()*speed,life:1,color});
 }
 
 function loop(){
@@ -106,6 +111,13 @@ function loop(){
     if(pl.ft>0.1){pl.ft=0;pl.frame=(pl.frame+1)%4;}
   }
   
+  // Particulas al caminar
+  if(pl.path.length>0&&frameCount%4===0){
+    const px=(pl.fx-pl.fy)*TW/2+W/2-(pl.fx-pl.fy)*TW/2;
+    const py=(pl.fx+pl.fy)*TH/2+H/2-(pl.fx+pl.fy)*TH/2;
+    addParticle(px+Math.random()*4-2,py+TH/2,'rgba(150,120,80,0.5)',1);
+  }
+  
   const camX=W/2-(pl.fx-pl.fy)*TW/2;
   const camY=H/2-(pl.fx+pl.fy)*TH/2;
   const pgx=Math.floor(pl.gx),pgy=Math.floor(pl.gy);
@@ -134,13 +146,10 @@ function loop(){
         ctx.fillStyle=bio.w[v%bio.w.length];
         ctx.fill();
         
-        // Ondas animadas
         ctx.fillStyle='rgba(255,255,255,0.2)';
         const wave=Math.sin((frameCount*0.05)+(x+y)*0.5)*2;
         ctx.fillRect(sx-6+wave,sy+TH/3,4,1);
-        ctx.fillRect(sx+2+wave*0.7,sy+TH/2-1,3,1);
         
-        // Peces
         if(biomaId===2&&v%7<2){
           const px=sx-6+((frameCount*0.2+v)%12);
           ctx.fillStyle='#ff8f00';
@@ -175,11 +184,6 @@ function loop(){
         ctx.closePath();
         ctx.fillStyle='rgba(0,0,0,0.1)';
         ctx.fill();
-        
-        if(v%5===0){
-          ctx.fillStyle='rgba(0,0,0,0.04)';
-          ctx.fillRect(sx-4+(v%8),sy+TH/4+(v%4),2,2);
-        }
         
         ctx.strokeStyle='rgba(0,0,0,0.05)';
         ctx.lineWidth=1;
@@ -262,32 +266,38 @@ function loop(){
         ctx.beginPath();ctx.moveTo(sx,sy-28);ctx.lineTo(sx-14,sy-16);ctx.lineTo(sx+14,sy-16);ctx.closePath();ctx.fill();
         ctx.fillStyle='#5d4037';ctx.fillRect(sx-3,sy-6,6,8);
         ctx.fillStyle='#4fc3f7';ctx.fillRect(sx-8,sy-10,4,4);ctx.fillRect(sx+4,sy-10,4,4);
+        
+        // Humo chimenea
+        if(frameCount%30<15){
+          ctx.fillStyle='rgba(200,200,200,0.4)';
+          ctx.beginPath();ctx.arc(sx+8,sy-32,3,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='rgba(200,200,200,0.3)';
+          ctx.beginPath();ctx.arc(sx+9,sy-36,2,0,Math.PI*2);ctx.fill();
+        }
       }else if(tipo<17){
-        // Flores silvestres
+        // Flores
         ctx.fillStyle='#4caf50';ctx.fillRect(sx-1,sy+TH/2-4,2,4);
         ctx.fillStyle=bio.f[v%bio.f.length];
         ctx.beginPath();ctx.arc(sx,sy+TH/2-6,2,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#ffeb3b';ctx.fillRect(sx,sy+TH/2-6,1,1);
       }else if(tipo<19&&biomaId===4){
-        // Charco de pantano
         ctx.fillStyle='rgba(80,100,60,0.4)';
         ctx.beginPath();ctx.ellipse(sx,sy+TH/2,6,2,0,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle='rgba(120,150,80,0.3)';
-        ctx.fillRect(sx-3,sy+TH/2-1,6,1);
       }else if(tipo<21&&biomaId===5){
-        // Piedras volcánicas
         ctx.fillStyle='rgba(0,0,0,0.3)';
         ctx.beginPath();ctx.ellipse(sx+2,sy+TH/2,6,2,0.2,0,Math.PI*2);ctx.fill();
-        
         ctx.fillStyle='#424242';
         ctx.beginPath();ctx.moveTo(sx-5,sy+TH/2);ctx.lineTo(sx-3,sy-5);ctx.lineTo(sx+2,sy-8);ctx.lineTo(sx+5,sy-4);ctx.lineTo(sx+5,sy+TH/2);ctx.closePath();ctx.fill();
-        // Grietas de lava
         ctx.fillStyle='#ff6f00';ctx.fillRect(sx,sy-4,1,3);
+      }else if(tipo<23&&biomeId===3){
+        // Nieve
+        ctx.fillStyle='rgba(255,255,255,0.6)';
+        ctx.fillRect(sx-6,sy+TH/2,12,2);
       }
     }
   }
   
-  // === NIEBLA EN PANTANO ===
+  // === NIEBLA PANTANO ===
   if(getBioma(pgx,pgy)===4){
     for(let y=Math.max(0,pgy-VR);y<Math.min(WORLD_H,pgy+VR);y++){
       for(let x=Math.max(0,pgx-VR);x<Math.min(WORLD_W,pgx+VR);x++){
@@ -301,6 +311,20 @@ function loop(){
         ctx.fillRect(sx-10,sy+TH/2+offset+2,20,4);
       }
     }
+  }
+  
+  // === PARTICULAS ===
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.vy+=0.05;
+    p.life-=0.02;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,2,2);
+    ctx.globalAlpha=1;
   }
   
   // === COFRES ===
@@ -345,12 +369,34 @@ function loop(){
   const py=(pl.fx+pl.fy)*TH/2+camY;
   const bo=pl.path.length>0?(pl.frame%2):0;
   
+  // Sombra
   ctx.fillStyle='rgba(0,0,0,0.3)';
   ctx.beginPath();ctx.ellipse(px,py+TH/2,7,3,0,0,Math.PI*2);ctx.fill();
   
-  ctx.fillStyle='#5d4037';ctx.fillRect(px-3,py+TH/2-8,2,8+bo);ctx.fillRect(px+1,py+TH/2-8,2,8+bo);
+  // Piernas con animacion
+  ctx.fillStyle='#5d4037';
+  if(pl.path.length>0){
+    // Caminar - piernas se alternan
+    if(pl.frame===0||pl.frame===2){
+      ctx.fillRect(px-3,py+TH/2-8,2,8);
+      ctx.fillRect(px+1,py+TH/2-8,2,8);
+    }else if(pl.frame===1){
+      ctx.fillRect(px-3,py+TH/2-9,2,9);
+      ctx.fillRect(px+1,py+TH/2-7,2,7);
+    }else{
+      ctx.fillRect(px-3,py+TH/2-7,2,7);
+      ctx.fillRect(px+1,py+TH/2-9,2,9);
+    }
+  }else{
+    ctx.fillRect(px-3,py+TH/2-8,2,8);
+    ctx.fillRect(px+1,py+TH/2-8,2,8);
+  }
+  
+  // Cuerpo
   ctx.fillStyle='#1976d2';ctx.fillRect(px-7,py+TH/2-20,14,14);
   ctx.fillStyle='#ffc107';ctx.fillRect(px-7,py+TH/2-8,14,2);
+  
+  // Cabeza
   ctx.fillStyle='#ffe0b2';ctx.fillRect(px-4,py+TH/2-26,8,6);
   ctx.fillStyle='#3e2723';ctx.fillRect(px-5,py+TH/2-28,10,3);
   ctx.fillStyle='#fff';ctx.fillRect(px-2,py+TH/2-24,2,2);ctx.fillRect(px+1,py+TH/2-24,2,2);
