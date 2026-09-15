@@ -1,5 +1,5 @@
 // ============================================================================
-// TEXTURAS - Detalladas, Suelo, Hierba, Caminos, Decorations
+// TEXTURAS CON PROFUNDIDAD Y SOMBRAS
 // ============================================================================
 
 function texturaHierba(sx, sy, biomaId, v) {
@@ -109,23 +109,83 @@ function texturaSuelo(sx, sy, v) {
     ctx.fillRect(sx - 2, sy + TH/2 + 2, 3, 1);
   }
   
-  // Musgo/liquen en sombra
+  // Musgo/liquen
   if (v % 13 === 0) {
     ctx.fillStyle = 'rgba(80,120,60,0.3)';
     ctx.fillRect(sx - 8, sy + TH/4, 4, 2);
   }
   
-  // Pequeños charcos de agua (pantano)
+  // Charcos
   if (v % 17 === 0) {
     ctx.fillStyle = 'rgba(60,140,180,0.25)';
     ctx.fillRect(sx + 4, sy + TH/3, 3, 2);
   }
   
-  // Marcas de pisadas
+  // Pisadas
   if (v % 23 === 0) {
     ctx.fillStyle = 'rgba(80,60,30,0.15)';
     ctx.fillRect(sx - 3, sy + TH/2 + 1, 2, 3);
     ctx.fillRect(sx + 2, sy + TH/2 + 2, 2, 3);
+  }
+}
+
+// === TILE CON PROFUNDIDAD Y SOMBRA ===
+function drawTileConProfundidad(sx, sy, w, h, color1, color2, x, y) {
+  const v = ((x * 374761393 + y * 668265263) ^ 0x5bf03635) >>> 0;
+  
+  // Tile base
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + w / 2, sy + h / 2);
+  ctx.lineTo(sx, sy + h);
+  ctx.lineTo(sx - w / 2, sy + h / 2);
+  ctx.closePath();
+  
+  // Gradiente de profundidad (luz desde arriba-izquierda)
+  const grad = ctx.createLinearGradient(sx - w/2, sy, sx + w/2, sy + h);
+  grad.addColorStop(0, color1);
+  grad.addColorStop(0.4, color2);
+  grad.addColorStop(0.7, shadeColor(color2, -15));
+  grad.addColorStop(1, shadeColor(color2, -25));
+  ctx.fillStyle = grad;
+  ctx.fill();
+  
+  // Borde superior brillante (luz)
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + w / 2, sy + h / 2);
+  ctx.lineTo(sx, sy + h / 2);
+  ctx.lineTo(sx - w / 2, sy + h / 2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  
+  // Borde inferior sombreado
+  ctx.beginPath();
+  ctx.moveTo(sx, sy + h);
+  ctx.lineTo(sx + w / 2, sy + h / 2);
+  ctx.lineTo(sx, sy + h / 2);
+  ctx.lineTo(sx - w / 2, sy + h / 2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fill();
+  
+  // Sombra interna (simula relieve)
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(sx - w/4, sy + h/4, w/2, h/2);
+  
+  // Punto de luz aleatorio (simula reflexo)
+  if (v % 19 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(sx - 3 + (v % 6), sy + 2 + (v % 4), 2, 2);
+  }
+  
+  // Textura de ruido (simula granularidad)
+  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  for (let i = 0; i < 3; i++) {
+    const nx = sx - 8 + (v * (i+1) % 16);
+    const ny = sy + 2 + (v * (i+2) % 8);
+    ctx.fillRect(nx, ny, 1, 1);
   }
 }
 
@@ -137,6 +197,10 @@ function drawTexturasBioma(sx, sy, x, y) {
 }
 
 function drawCaminoTierra(sx, sy, v) {
+  // Sombra del camino
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(sx - TW/3 + 2, sy + TH/4 + 2, TW*2/3, TH/3);
+  
   ctx.fillStyle = '#a1887f';
   ctx.fillRect(sx - TW/3, sy + TH/4, TW*2/3, TH/3);
   

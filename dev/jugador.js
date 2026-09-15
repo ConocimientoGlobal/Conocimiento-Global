@@ -1,5 +1,5 @@
 // ============================================================================
-// JUGADOR - Movimiento preciso, Pathfinding, Stats
+// JUGADOR - Más lento, pathfinding
 // ============================================================================
 
 const pl = {
@@ -12,8 +12,7 @@ const pl = {
   temp: 100, maxTemp: 100,
   nivel: 1, xp: 0,
   oro: 50,
-  biomaActual: 0,
-  tapTargetX: 0, tapTargetY: 0
+  biomaActual: 0
 };
 
 function aplicarDificultad(dt) {
@@ -59,7 +58,7 @@ function findPath(sx, sy, gx, gy) {
 function moverJugador(dt) {
   if (pl.path.length === 0) return;
   const t = pl.path[0];
-  const speed = 3.3 * dt;
+  const speed = 2.5 * dt; // Más lento
   const dx = t.x - pl.fx;
   const dy = t.y - pl.fy;
   const dist = Math.sqrt(dx*dx + dy*dy);
