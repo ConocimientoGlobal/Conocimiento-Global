@@ -17,7 +17,7 @@ function calcularTileSize() {
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
   // Tiles grandes
-  const TILE = Math.min(W, H) / 10;
+  const TILE = Math.min(W, H) / 6;
   TW = TILE;
   TH = TILE / 2;
 }
